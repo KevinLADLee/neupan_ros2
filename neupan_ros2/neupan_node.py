@@ -12,10 +12,6 @@ import numpy as np
 from neupan import neupan
 from neupan.util import get_transform
 
-from rclpy.qos import qos_profile_sensor_data
-from rclpy.qos import QoSProfile
-from rclpy.qos import QoSReliabilityPolicy
-
 import time
 import os
 import rclpy
@@ -29,6 +25,9 @@ from sensor_msgs.msg import LaserScan
 import tf2_ros
 from tf_transformations import euler_from_quaternion, quaternion_from_euler
 
+from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import QoSProfile
+from rclpy.qos import QoSReliabilityPolicy 
 
 class neupan_core(Node):
     def __init__(self):
@@ -52,6 +51,7 @@ class neupan_core(Node):
         self.declare_parameter("dune_checkpoint_file", "NOT SET")
         self.declare_parameter("refresh_initial_path", False)
         self.declare_parameter("flip_angle", False)
+        self.declare_parameter("include_initial_path_direction", False)
 
         self.planner_config_file = os.path.join(self.pkg_dir, "config", "neupan_config",  
                                                 self.get_parameter("neupan_config_file").get_parameter_value().string_value)
@@ -78,6 +78,10 @@ class neupan_core(Node):
         self.dune_checkpoint = dune_checkpoint_file
         self.refresh_initial_path = self.get_parameter("refresh_initial_path").get_parameter_value().bool_value
         self.flip_angle = self.get_parameter("flip_angle").get_parameter_value().bool_value
+        self.include_initial_path_direction = self.get_parameter("include_initial_path_direction").get_parameter_value().bool_value
+
+        if self.refresh_initial_path:
+            self.get_logger().info("Refresh initial path is enabled")
 
         if not self.planner_config_file:
             raise ValueError("No planner config file provided! Please set the parameter 'config_file'")
@@ -109,16 +113,18 @@ class neupan_core(Node):
 
         # Subscribers
         scan_qos_profile = QoSProfile(depth=10, reliability=QoSReliabilityPolicy.BEST_EFFORT)
-        self.create_subscription(LaserScan, "/scan", self.scan_callback, 10, scan_qos_profile)
-        self.create_subscription(Path, "/initial_path", self.path_callback, 10)
-        self.create_subscription(PoseStamped, "/neupan_goal", self.goal_callback, 10)
+        self.create_subscription(LaserScan, "/scan", self.scan_callback, scan_qos_profile)
+        self.create_subscription(Path, "/plan", self.path_callback, 10)
+        self.create_subscription(PoseStamped, "/goal_pose", self.goal_callback, 10)
         
+        time_period = 0.02
+        self.create_timer(time_period, self.run)
 
     def run(self):
 
-        r = self.create_rate(50)
+        # r = self.create_rate(50)
 
-        while rclpy.ok():
+        # while rclpy.ok():
 
             try:
                 trans = self.tf_buffer.lookup_transform(
@@ -129,33 +135,48 @@ class neupan_core(Node):
                 x = trans.transform.translation.x
                 y = trans.transform.translation.y
                 self.robot_state = np.array([x, y, yaw]).reshape(3, 1)
+                self.get_logger().info("robot state: {}".format(self.robot_state), once=True)
 
             except tf2_ros.LookupException:
                 self.get_logger().info(
                     f"waiting for tf for the transform from {self.base_frame} to {self.map_frame}",
                     throttle_duration_sec=1.0,
                 )
-                continue
+                return
+            except tf2_ros.ConnectivityException:
+                self.get_logger().warn(
+                    "ConnectivityException: Transform not available, waiting for connection"
+                )
+                return
+            except tf2_ros.ExtrapolationException:
+                pass
+                # self.get_logger().warn("ExtrapolationException: Transform not available at requested time")
 
             if self.robot_state is None:
                 self.get_logger().warn("waiting for robot state", throttle_duration_sec=1.0)
-                continue
+                return
 
-            self.get_logger().info_once(
-                f"robot state received {self.robot_state.tolist()}"
-            )
+            # self.get_logger().info(
+            #     f"robot state received {self.robot_state.tolist()}"
+            # )
 
             if (
                 len(self.neupan_planner.waypoints) >= 1
                 and self.neupan_planner.initial_path is None
             ):
                 self.neupan_planner.set_initial_path_from_state(self.robot_state)
+                print('set initial path', self.neupan_planner.initial_path)
 
             if self.neupan_planner.initial_path is None:
                 self.get_logger().warn("waiting for neupan initial path", throttle_duration_sec=1.0)
-                continue
+                return
+            
+            # print initial path
+            # self.get_logger().info(
+            #     f"neupan initial path: {self.neupan_planner.initial_path}"
+            # )
 
-            self.get_logger().info_once("initial Path Received")
+            # self.get_logger().info("initial Path Received")
             self.ref_path_pub.publish(
                 self.generate_path_msg(self.neupan_planner.initial_path)
             )
@@ -166,6 +187,9 @@ class neupan_core(Node):
                     throttle_duration_sec=1.0,
                 )
 
+            # debug:
+            # print(f"robot state: {self.robot_state}")
+            # print(f"obstacle points: {self.obstacle_points}")
             action, info = self.neupan_planner(self.robot_state, self.obstacle_points)
 
             self.stop = info["stop"]
@@ -179,9 +203,22 @@ class neupan_core(Node):
             self.ref_state_pub.publish(self.generate_path_msg(info["ref_state_list"]))
             self.vel_pub.publish(self.generate_twist_msg(action))
 
-            self.point_markers_pub_dune.publish(self.generate_dune_points_markers_msg())
-            self.point_markers_pub_nrmp.publish(self.generate_nrmp_points_markers_msg())
-            self.robot_marker_pub.publish(self.generate_robot_marker_msg())
+            dune_points_makers = self.generate_dune_points_markers_msg()
+            nrmp_points_makers = self.generate_nrmp_points_markers_msg()
+            robot_marker = self.generate_robot_marker_msg()
+            if dune_points_makers is None:
+                self.get_logger().warn("No dune points to visualize")
+            else:
+                self.point_markers_pub_dune.publish(self.generate_dune_points_markers_msg())
+
+            if nrmp_points_makers is None:
+                self.get_logger().warn("No nrmp points to visualize")
+            else:  
+                self.point_markers_pub_nrmp.publish(self.generate_nrmp_points_markers_msg())
+            if robot_marker is None:
+                self.get_logger().warn("No robot marker to visualize")
+            else:
+                self.robot_marker_pub.publish(self.generate_robot_marker_msg())
 
             if info["stop"]:
                 self.get_logger().info(
@@ -190,10 +227,11 @@ class neupan_core(Node):
                     throttle_duration_sec=0.1,
                 )
 
-            r.sleep()
+            # r.sleep()
 
     # scan callback
     def scan_callback(self, scan_msg):
+        # self.get_logger().info("scan received")
 
         if self.robot_state is None:
             return None
@@ -222,7 +260,7 @@ class neupan_core(Node):
 
         if len(points) == 0:
             self.obstacle_points = None
-            self.get_logger().info_once("No valid scan points")
+            self.get_logger().info("No valid scan points")
             return None
 
         point_array = np.hstack(points)
@@ -238,7 +276,7 @@ class neupan_core(Node):
 
             trans_matrix, rot_matrix = get_transform(np.c_[x, y, yaw].reshape(3, 1))
             self.obstacle_points = rot_matrix @ point_array + trans_matrix
-            self.get_logger().info_once("Scan obstacle points Received")
+            self.get_logger().info("Scan obstacle points Received", once=True)
 
             return self.obstacle_points
 
@@ -255,10 +293,23 @@ class neupan_core(Node):
 
         initial_point_list = []
 
-        for p in path.poses:
+        for i in range(len(path.poses)):
+            p = path.poses[i]
             x = p.pose.position.x
             y = p.pose.position.y
-            theta = self.quat_to_yaw(p.pose.orientation)
+            
+            if self.include_initial_path_direction:
+                theta = self.quat_to_yaw(p.pose.orientation)
+            else:
+                self.get_logger().info("Using the points gradient as the initial path direction", once=True)
+
+                if i + 1 < len(path.poses):
+                    p2 = path.poses[i + 1]
+                    x2 = p2.pose.position.x
+                    y2 = p2.pose.position.y
+                    theta = atan2(y2 - y, x2 - x)
+                else:
+                    theta = initial_point_list[-1][2, 0]
 
             points = np.array([x, y, theta, 1]).reshape(4, 1)
             initial_point_list.append(points)
@@ -278,7 +329,10 @@ class neupan_core(Node):
         print(f"set neupan goal: {[x, y, theta]}")
 
         self.get_logger().info("neupan goal update")
+        self.get_logger().info(f"state: {self.robot_state.tolist()}")
+        self.get_logger().info(f"goal: {self.goal.tolist()}")
         self.neupan_planner.update_initial_path_from_goal(self.robot_state, self.goal)
+        self.neupan_planner.reset()
 
 
     def quat_to_yaw_list(self, quater):
@@ -298,16 +352,21 @@ class neupan_core(Node):
         path = Path()
         path.header.frame_id = self.map_frame
         path.header.stamp = self.get_clock().now().to_msg()
-        path.header.seq = 0
+        # path.header.seq = 0
 
         for index, point in enumerate(path_list):
             ps = PoseStamped()
             ps.header.frame_id = self.map_frame
-            ps.header.seq = index
-
-            ps.pose.position.x = point[0, 0]
-            ps.pose.position.y = point[1, 0]
-            ps.pose.orientation.w = 1
+            # ps.header.seq = index  # 'seq' field does not exist in ROS2
+            # print(f"point {index}: {point}")
+            # Ensure point is a 2D numpy array with shape (>=3, 1)
+            point_arr = np.array(point)
+            if point_arr.ndim == 1:
+                # If point is 1D, reshape to (3, 1)
+                point_arr = point_arr.reshape(-1, 1)
+            ps.pose.position.x = float(point_arr[0, 0])
+            ps.pose.position.y = float(point_arr[1, 0])
+            ps.pose.orientation = self.yaw_to_quat(float(point_arr[2, 0]))
 
             path.poses.append(ps)
 
@@ -318,8 +377,8 @@ class neupan_core(Node):
         if vel is None:
             return Twist()
 
-        speed = vel[0, 0]
-        steer = vel[1, 0]
+        speed = float(vel[0, 0])
+        steer = float(vel[1, 0])
 
         if self.stop or self.arrive:
             # print('stop flag true')
@@ -346,7 +405,7 @@ class neupan_core(Node):
 
                 marker = Marker()
                 marker.header.frame_id = self.map_frame
-                marker.header.seq = 0
+                # marker.header.seq = 0
                 marker.header.stamp = self.get_clock().now().to_msg()
 
                 marker.scale.x = self.marker_size
@@ -360,8 +419,8 @@ class neupan_core(Node):
 
                 marker.id = index
                 marker.type = 1
-                marker.pose.position.x = point[0]
-                marker.pose.position.y = point[1]
+                marker.pose.position.x = float(point[0])
+                marker.pose.position.y = float(point[1])
                 marker.pose.position.z = 0.3
                 marker.pose.orientation = Quaternion()
 
@@ -382,7 +441,7 @@ class neupan_core(Node):
 
                 marker = Marker()
                 marker.header.frame_id = self.map_frame
-                marker.header.seq = 0
+                # marker.header.seq = 0
                 marker.header.stamp = self.get_clock().now().to_msg()
 
                 marker.scale.x = self.marker_size
@@ -396,8 +455,8 @@ class neupan_core(Node):
 
                 marker.id = index
                 marker.type = 1
-                marker.pose.position.x = point[0]
-                marker.pose.position.y = point[1]
+                marker.pose.position.x = float(point[0])
+                marker.pose.position.y = float(point[1])
                 marker.pose.position.z = 0.3
                 marker.pose.orientation = Quaternion()
 
@@ -410,8 +469,8 @@ class neupan_core(Node):
         marker = Marker()
 
         marker.header.frame_id = self.map_frame
-        marker.header.seq = 0
-        marker.header.stamp = rclpy.get_rostime()
+        # marker.header.seq = 0
+        marker.header.stamp = rclpy.time.Time().to_msg()
 
         marker.color.a = 1.0
         marker.color.r = 0 / 255
@@ -445,7 +504,7 @@ class neupan_core(Node):
 
             marker.pose.position.x = marker_x
             marker.pose.position.y = marker_y
-            marker.pose.position.z = 0
+            marker.pose.position.z = 0.0
             marker.pose.orientation = self.yaw_to_quat(self.robot_state[2, 0])
 
         return marker
@@ -455,8 +514,8 @@ class neupan_core(Node):
 
         quater = Quaternion()
 
-        quater.x = 0
-        quater.y = 0
+        quater.x = 0.0
+        quater.y = 0.0
         quater.z = sin(yaw / 2)
         quater.w = cos(yaw / 2)
 
@@ -480,6 +539,8 @@ def main(args=None):
 
     neupan_core_node = neupan_core()
     rclpy.spin(neupan_core_node)
+    print("neupan start!")
+    neupan_core_node.run()
 
     neupan_core_node.destroy_node()
     rclpy.shutdown()

@@ -3,7 +3,7 @@ neupan_node:
     neupan_config_file: 'neupan_limo_diff.yaml'
     dune_checkpoint_file: 'model_5000.pth'
     map_frame: 'map'
-    base_frame: 'base_link'
+    base_frame: 'livox_frame'
     lidar_frame: 'livox_frame'
     marker_size: 0.05
     marker_z: 1.0
@@ -11,7 +11,8 @@ neupan_node:
     scan_angle_min: -3.14
     scan_downsample: 1
     scan_range_max: 5.0
-    scan_range_min: 0.1
+    scan_range_min: 0.01
     flip_angle: false
     refresh_initial_path: true
+    include_initial_path_direction: false
 

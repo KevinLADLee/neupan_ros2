@@ -7,6 +7,7 @@ launch_files = glob.glob('launch/*.py')
 config_files = glob.glob('config/*.yaml')
 neupan_config_files = glob.glob('config/neupan_config/*')
 dune_checkpoint_files = glob.glob('config/dune_checkpoint/*')
+rviz_files = glob.glob('rviz/*.rviz')
 
 setup(
     name=package_name,
@@ -20,6 +21,7 @@ setup(
         ('share/' + package_name + '/config', config_files),
         ('share/' + package_name + '/config/neupan_config', neupan_config_files),
         ('share/' + package_name + '/config/dune_checkpoint', dune_checkpoint_files),
+        ('share/' + package_name + '/rviz', rviz_files)
     ],
     install_requires=['setuptools'],
     zip_safe=True,
