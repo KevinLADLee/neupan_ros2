@@ -121,118 +121,95 @@ class neupan_core(Node):
         self.create_timer(time_period, self.run)
 
     def run(self):
-
-        # r = self.create_rate(50)
-
-        # while rclpy.ok():
-
-            try:
-                trans = self.tf_buffer.lookup_transform(
-                    self.map_frame, self.base_frame, rclpy.time.Time()
-                )
-
-                yaw = self.quat_to_yaw(trans.transform.rotation)
-                x = trans.transform.translation.x
-                y = trans.transform.translation.y
-                self.robot_state = np.array([x, y, yaw]).reshape(3, 1)
-                self.get_logger().info("robot state: {}".format(self.robot_state), once=True)
-
-            except tf2_ros.LookupException:
-                self.get_logger().info(
-                    f"waiting for tf for the transform from {self.base_frame} to {self.map_frame}",
-                    throttle_duration_sec=1.0,
-                )
-                return
-            except tf2_ros.ConnectivityException:
-                self.get_logger().warn(
-                    "ConnectivityException: Transform not available, waiting for connection"
-                )
-                return
-            except tf2_ros.ExtrapolationException:
-                pass
-                # self.get_logger().warn("ExtrapolationException: Transform not available at requested time")
-
-            if self.robot_state is None:
-                self.get_logger().warn("waiting for robot state", throttle_duration_sec=1.0)
-                return
-
-            # self.get_logger().info(
-            #     f"robot state received {self.robot_state.tolist()}"
-            # )
-
-            if (
-                len(self.neupan_planner.waypoints) >= 1
-                and self.neupan_planner.initial_path is None
-            ):
-                self.neupan_planner.set_initial_path_from_state(self.robot_state)
-                print('set initial path', self.neupan_planner.initial_path)
-
-            if self.neupan_planner.initial_path is None:
-                self.get_logger().warn("waiting for neupan initial path", throttle_duration_sec=1.0)
-                return
-            
-            # print initial path
-            # self.get_logger().info(
-            #     f"neupan initial path: {self.neupan_planner.initial_path}"
-            # )
-
-            # self.get_logger().info("initial Path Received")
-            self.ref_path_pub.publish(
-                self.generate_path_msg(self.neupan_planner.initial_path)
+        try:
+            trans = self.tf_buffer.lookup_transform(
+                self.map_frame, self.base_frame, rclpy.time.Time()
             )
 
-            if self.obstacle_points is None:
-                self.get_logger().warn(
-                    "No obstacle points, only path tracking task will be performed",
-                    throttle_duration_sec=1.0,
-                )
+            yaw = self.quat_to_yaw(trans.transform.rotation)
+            x = trans.transform.translation.x
+            y = trans.transform.translation.y
+            self.robot_state = np.array([x, y, yaw]).reshape(3, 1)
+            self.get_logger().info("robot state: {}".format(self.robot_state), once=True)
 
-            # debug:
-            # print(f"robot state: {self.robot_state}")
-            # print(f"obstacle points: {self.obstacle_points}")
-            action, info = self.neupan_planner(self.robot_state, self.obstacle_points)
+        except tf2_ros.LookupException:
+            self.get_logger().info(
+                f"waiting for tf for the transform from {self.base_frame} to {self.map_frame}",
+                throttle_duration_sec=1.0,
+            )
+            return
+        except tf2_ros.ConnectivityException:
+            self.get_logger().warn(
+                "ConnectivityException: Transform not available, waiting for connection"
+            )
+            return
+        except tf2_ros.ExtrapolationException:
+            pass
 
-            self.stop = info["stop"]
-            self.arrive = info["arrive"]
+        if self.robot_state is None:
+            self.get_logger().warn("waiting for robot state", throttle_duration_sec=1.0)
+            return
 
-            if info["arrive"]:
-                self.get_logger().info("arrive at the target", throttle_duration_sec=0.1)
+        if (
+            len(self.neupan_planner.waypoints) >= 1
+            and self.neupan_planner.initial_path is None
+        ):
+            self.neupan_planner.set_initial_path_from_state(self.robot_state)
+            print('set initial path', self.neupan_planner.initial_path)
 
-            # publish the path and velocity
-            self.plan_pub.publish(self.generate_path_msg(info["opt_state_list"]))
-            self.ref_state_pub.publish(self.generate_path_msg(info["ref_state_list"]))
-            self.vel_pub.publish(self.generate_twist_msg(action))
+        if self.neupan_planner.initial_path is None:
+            self.get_logger().warn("waiting for neupan initial path", throttle_duration_sec=1.0)
+            return
 
-            dune_points_makers = self.generate_dune_points_markers_msg()
-            nrmp_points_makers = self.generate_nrmp_points_markers_msg()
-            robot_marker = self.generate_robot_marker_msg()
-            if dune_points_makers is None:
-                self.get_logger().warn("No dune points to visualize")
-            else:
-                self.point_markers_pub_dune.publish(self.generate_dune_points_markers_msg())
+        self.ref_path_pub.publish(
+            self.generate_path_msg(self.neupan_planner.initial_path)
+        )
 
-            if nrmp_points_makers is None:
-                self.get_logger().warn("No nrmp points to visualize")
-            else:  
-                self.point_markers_pub_nrmp.publish(self.generate_nrmp_points_markers_msg())
-            if robot_marker is None:
-                self.get_logger().warn("No robot marker to visualize")
-            else:
-                self.robot_marker_pub.publish(self.generate_robot_marker_msg())
+        if self.obstacle_points is None:
+            self.get_logger().warn(
+                "No obstacle points, only path tracking task will be performed",
+                throttle_duration_sec=1.0,
+            )
 
-            if info["stop"]:
-                self.get_logger().info(
-                    f"neupan stop with the min distance {self.neupan_planner.min_distance} "
-                    f"threshold {self.neupan_planner.collision_threshold}",
-                    throttle_duration_sec=0.1,
-                )
+        action, info = self.neupan_planner(self.robot_state, self.obstacle_points)
 
-            # r.sleep()
+        self.stop = info["stop"]
+        self.arrive = info["arrive"]
+
+        if info["arrive"]:
+            self.get_logger().info("arrive at the target", throttle_duration_sec=0.1)
+
+        # publish the path and velocity
+        self.plan_pub.publish(self.generate_path_msg(info["opt_state_list"]))
+        self.ref_state_pub.publish(self.generate_path_msg(info["ref_state_list"]))
+        self.vel_pub.publish(self.generate_twist_msg(action))
+
+        dune_points_makers = self.generate_dune_points_markers_msg()
+        nrmp_points_makers = self.generate_nrmp_points_markers_msg()
+        robot_marker = self.generate_robot_marker_msg()
+        if dune_points_makers is None:
+            self.get_logger().warn("No dune points to visualize")
+        else:
+            self.point_markers_pub_dune.publish(self.generate_dune_points_markers_msg())
+
+        if nrmp_points_makers is None:
+            self.get_logger().warn("No nrmp points to visualize")
+        else:
+            self.point_markers_pub_nrmp.publish(self.generate_nrmp_points_markers_msg())
+        if robot_marker is None:
+            self.get_logger().warn("No robot marker to visualize")
+        else:
+            self.robot_marker_pub.publish(self.generate_robot_marker_msg())
+
+        if info["stop"]:
+            self.get_logger().info(
+                f"neupan stop with the min distance {self.neupan_planner.min_distance} "
+                f"threshold {self.neupan_planner.collision_threshold}",
+                throttle_duration_sec=0.1,
+            )
 
     # scan callback
     def scan_callback(self, scan_msg):
-        # self.get_logger().info("scan received")
-
         if self.robot_state is None:
             return None
 
@@ -348,17 +325,13 @@ class neupan_core(Node):
 
     # generate ros message
     def generate_path_msg(self, path_list):
-
         path = Path()
         path.header.frame_id = self.map_frame
         path.header.stamp = self.get_clock().now().to_msg()
-        # path.header.seq = 0
 
         for index, point in enumerate(path_list):
             ps = PoseStamped()
             ps.header.frame_id = self.map_frame
-            # ps.header.seq = index  # 'seq' field does not exist in ROS2
-            # print(f"point {index}: {point}")
             # Ensure point is a 2D numpy array with shape (>=3, 1)
             point_arr = np.array(point)
             if point_arr.ndim == 1:
@@ -373,7 +346,6 @@ class neupan_core(Node):
         return path
 
     def generate_twist_msg(self, vel):
-
         if vel is None:
             return Twist()
 
@@ -381,19 +353,14 @@ class neupan_core(Node):
         steer = float(vel[1, 0])
 
         if self.stop or self.arrive:
-            # print('stop flag true')
             return Twist()
-
         else:
             action = Twist()
-
             action.linear.x = speed
             action.angular.z = steer
-
             return action
 
     def generate_dune_points_markers_msg(self):
-
         marker_array = MarkerArray()
 
         if self.neupan_planner.dune_points is None:
@@ -402,10 +369,8 @@ class neupan_core(Node):
             points = self.neupan_planner.dune_points
 
             for index, point in enumerate(points.T):
-
                 marker = Marker()
                 marker.header.frame_id = self.map_frame
-                # marker.header.seq = 0
                 marker.header.stamp = self.get_clock().now().to_msg()
 
                 marker.scale.x = self.marker_size
@@ -429,7 +394,6 @@ class neupan_core(Node):
             return marker_array
 
     def generate_nrmp_points_markers_msg(self):
-
         marker_array = MarkerArray()
 
         if self.neupan_planner.nrmp_points is None:
@@ -438,10 +402,8 @@ class neupan_core(Node):
             points = self.neupan_planner.nrmp_points
 
             for index, point in enumerate(points.T):
-
                 marker = Marker()
                 marker.header.frame_id = self.map_frame
-                # marker.header.seq = 0
                 marker.header.stamp = self.get_clock().now().to_msg()
 
                 marker.scale.x = self.marker_size
@@ -465,11 +427,9 @@ class neupan_core(Node):
             return marker_array
 
     def generate_robot_marker_msg(self):
-
         marker = Marker()
 
         marker.header.frame_id = self.map_frame
-        # marker.header.seq = 0
         marker.header.stamp = rclpy.time.Time().to_msg()
 
         marker.color.a = 1.0

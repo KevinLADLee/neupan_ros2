@@ -27,7 +27,7 @@ setup(
     zip_safe=True,
     maintainer='kevinlad',
     maintainer_email='kevinladlee@gmail.com',
-    description='TODO: Package description',
+    description='NeuPAN: Neural Proximal Alternating Network for autonomous robot navigation with ROS2 integration',
     license='Apache-2.0',
     tests_require=['pytest'],
     keywords=['ROS'],
