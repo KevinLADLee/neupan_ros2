@@ -270,7 +270,7 @@ If you find this code or paper helpful, please kindly star ⭐ this repository a
 
 ## 🤝 Acknowledgments
 
-- **Original NeuPAN Algorithm**: Developed by [Ruihua HAN](https://github.com/hanruihua) and `SIAT-INVS` team at HKU
+- **Original NeuPAN Algorithm**: Developed by [Ruihua HAN](https://github.com/hanruihua) and `SIAT-INVS` Team.
 - **ROS2 Integration**: Optimized and tested for AgileX Limo platform
 - **Hardware Partner**: AgileX x Hive Matrix ([sales@hive-matrix.com](mailto:sales@hive-matrix.com))
 

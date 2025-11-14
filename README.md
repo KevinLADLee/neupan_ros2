@@ -234,7 +234,7 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 - [NeuPAN](https://github.com/hanruihua/NeuPAN) - Official NeuPAN algorithm repository
 - [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) - ROS1 version of NeuPAN
 - [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt) - Reference to building the minimal simulator
-
+- **ROS2 Integration**: Optimized and tested for [AgileX Limo](https://global.agilex.ai/products/limo-pro) platform by [**HiveMatrix Limited**](mailto:sales@hive-matrix.com).
 ---
 
 **Author**: KevinLADLee (kevinladlee@gmail.com)  

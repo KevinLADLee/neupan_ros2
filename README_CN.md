@@ -231,8 +231,7 @@ colcon build --packages-select ddr_minimal_sim
 - [NeuPAN](https://github.com/hanruihua/NeuPAN) - 官方 NeuPAN 算法仓库
 - [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) - NeuPAN 的 ROS1 版本
 - [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt) - 参考构建最小仿真器
-
----
+- **ROS2 Integration**: ROS2相关代码由  [**HiveMatrix Limited**](mailto:sales@hive-matrix.com) 在 [松灵机器人 Limo](https://global.agilex.ai/products/limo-pro) 平台进行了部署和测试
 
 **Author**: KevinLADLee (kevinladlee@gmail.com)
 **Repository**: https://github.com/KevinLADLee/neupan_ros2
