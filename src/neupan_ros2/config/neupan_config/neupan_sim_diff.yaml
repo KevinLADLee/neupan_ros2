@@ -1,5 +1,5 @@
 # mpc
-receding: 6
+receding: 10
 step_time: 0.25
 ref_speed: 0.5
 device: 'cpu'

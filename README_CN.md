@@ -32,6 +32,12 @@
 - 🛠️ **易于测试**: 预配置场景用于算法验证
 - 📦 **模块化设计**: 独立包设计，使用灵活
 
+### 演示
+
+<div align="center">
+  <img src="imgs/sim-maze.gif" alt="NeuPAN 在迷宫场景中导航" width="600"/>
+  <p><em>NeuPAN 在复杂迷宫场景中自主导航</em></p>
+</div>
 
 ### 快速开始
 
@@ -108,13 +114,7 @@ source install/setup.bash
 ros2 launch neupan_ros2 sim_diff_launch.py sim_env_config:=scenario_corridor.yaml
 ```
 
-**可用场景:**
-- `scenario_corridor.yaml` - 走廊导航 (默认)
-- `scenario_maze.yaml` - 复杂迷宫
-- `scenario_narrow_passage.yaml` - 窄通道挑战
-- `scenario_u_trap.yaml` - U型陷阱
-- `scenario_polygon_random.yaml` - 随机障碍物
-- `scenario_empty.yaml` - 空旷空间
+**可用场景:** 查看 [ddr_minimal_sim 场景列表](src/ddr_minimal_sim/README.md#pre-configured-scenarios) 获取完整列表（走廊、迷宫、窄通道、U型陷阱、随机障碍、空旷空间）
 
 ### 使用场景
 
@@ -141,21 +141,13 @@ ros2 launch neupan_ros2 sim_diff_launch.py sim_env_config:=scenario_maze.yaml
 
 #### 📦 src/neupan_ros2
 
-ROS2 版本的 [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) 实现
-
-**文档:** [src/neupan_ros2/README.md](src/neupan_ros2/README.md)
+[NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) 神经导航规划器的 ROS2 实现。
+**[→ 文档](src/neupan_ros2/README.md)**
 
 #### 📦 src/ddr_minimal_sim
 
-轻量级差分驱动机器人仿真器。
-
-**主要功能:**
-- 差分驱动运动学仿真
-- 带光线投射的 2D 激光扫描仪
-- 多个预配置场景
-- 低计算开销
-
-**文档:** [src/ddr_minimal_sim/README.md](src/ddr_minimal_sim/README.md)
+轻量级差分驱动机器人仿真器，支持激光扫描和预配置测试场景。
+**[→ 文档](src/ddr_minimal_sim/README.md)**
 
 
 ### 开发
@@ -173,13 +165,12 @@ colcon build --packages-select ddr_minimal_sim
 
 #### 自定义
 
-- **添加新场景**: 编辑 `src/ddr_minimal_sim/config/scenario_*.yaml`
-- **调整参数**: 修改 `src/neupan_ros2/config/neupan_config/neupan_sim_diff.yaml`
-- **自定义机器人**: 基于现有模板创建新配置文件
+- **仿真器场景**: 参见 [ddr_minimal_sim 开发指南](src/ddr_minimal_sim/README.md#development) 了解自定义场景
+- **NeuPAN 参数**: 修改 `src/neupan_ros2/config/neupan_config/neupan_sim_diff.yaml`
 
 ### 引用
 
-如果你在研究中使用 NeuPAN，请引用:
+如果这段代码或论文对你有帮助，请为本仓库点个星 ⭐ 并引用我们的论文：
 
 ```bibtex
 @ARTICLE{10938329,
@@ -224,14 +215,15 @@ colcon build --packages-select ddr_minimal_sim
 
 ### 贡献
 
-欢迎贡献！请随时提交 issue 或 pull request。
+欢迎贡献！请在 [GitHub](https://github.com/KevinLADLee/neupan_ros2) 提交 issue 或 pull request。
 
 ### 致谢
 
-- [NeuPAN](https://github.com/hanruihua/NeuPAN) - 官方 NeuPAN 算法仓库
-- [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) - NeuPAN 的 ROS1 版本
-- [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt) - 参考构建最小仿真器
-- **ROS2 Integration**: ROS2相关代码由  [**HiveMatrix Limited**](mailto:sales@hive-matrix.com) 在 [松灵机器人 Limo](https://global.agilex.ai/products/limo-pro) 平台进行了部署和测试
+- [NeuPAN](https://github.com/hanruihua/NeuPAN) & [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) - 原始算法
+- [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt) - 仿真器参考
+- ROS2 集成由 [HiveMatrix Limited](mailto:sales@hive-matrix.com) 在 [松灵机器人 Limo](https://global.agilex.ai/products/limo-pro) 平台优化与测试
+  - *对 Limo 机器人或技术支持感兴趣？联系 HiveMatrix - 您的商业支持为持续开源开发提供动力*
 
-**Author**: KevinLADLee (kevinladlee@gmail.com)
-**Repository**: https://github.com/KevinLADLee/neupan_ros2
+---
+
+**作者**: KevinLADLee (kevinladlee@gmail.com)

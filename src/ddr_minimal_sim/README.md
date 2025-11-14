@@ -1,5 +1,7 @@
 # DDR Minimal Sim
 
+> **Part of [NeuPAN ROS2 Workspace](../../README.md)** → `neupan_ros2_ws` > `neupan_ros2` > `ddr_minimal_sim`
+
 A lightweight differential-drive robot (DDR) simulator for ROS2, designed for rapid prototyping and testing of navigation algorithms.
 
 ## Overview
@@ -10,8 +12,6 @@ DDR Minimal Sim provides a minimal, efficient simulation environment for differe
 - **2D Laser Scanner**: Ray-casting based laser simulation with noise modeling
 - **Flexible Environments**: YAML-based scenario configuration system
 - **Visualization**: Real-time RViz markers and occupancy grid publishing
-
-This simulator is part of the [NeuPAN ROS2 Workspace](../../README.md) and serves as the recommended testing platform for the NeuPAN navigation planner.
 
 ## Features
 
@@ -49,35 +49,19 @@ Six ready-to-use testing scenarios are included:
 
 ## Quick Start
 
-### As Part of NeuPAN Workspace
+**For complete system usage, see [workspace README](../../README.md#quick-start).**
 
-**Recommended:** Use the complete NeuPAN system:
-
-```bash
-# From workspace root
-source install/setup.bash
-ros2 launch neupan_ros2 sim_diff_launch.py sim_env_config:=scenario_corridor.yaml
-```
-
-### Standalone Usage
-
-Run the simulator independently for custom navigation algorithm testing:
+Standalone simulator testing:
 
 ```bash
-# Launch complete simulator (all nodes + static TF)
+# Launch simulator with a scenario
 ros2 launch ddr_minimal_sim complete_sim.launch.py sim_env_config:=scenario_maze.yaml
 
-# In another terminal, publish velocity commands
+# Publish velocity commands (in another terminal)
 ros2 topic pub /cmd_vel geometry_msgs/Twist "{linear: {x: 0.3}, angular: {z: 0.0}}"
 ```
 
-### Launch Arguments
-
-```bash
-ros2 launch ddr_minimal_sim complete_sim.launch.py \
-    sim_env_config:=scenario_maze.yaml \  # Environment configuration
-    rviz:=true                             # Launch RViz (default: true)
-```
+**Launch arguments:** `sim_env_config:=<scenario.yaml>`, `rviz:=<true|false>`
 
 ## Configuration
 
@@ -218,25 +202,15 @@ Key classes to modify:
 - Ensure RViz fixed frame is set to `map` or `odom`
 - Check that visualization topics are being published: `ros2 topic echo /vehicle_markers --once`
 
-## License
+## License & Attribution
 
-See the main workspace [LICENSE](../../LICENSE) file for license information.
+**License:** GNU GPL v3.0 (see [workspace LICENSE](../../LICENSE))
+**Author:** KevinLADLee
+**Contributing:** See [workspace README](../../README.md#contributing)
 
-## Author
-
-**KevinLADLee**
-GitHub: https://github.com/KevinLADLee
-
-## Contributing
-
-This package is part of the NeuPAN ROS2 Workspace. For contributions, please refer to the main [repository](https://github.com/KevinLADLee/neupan_ros2).
-
-## Acknowledgments
-
-- Designed specifically for testing the [NeuPAN](https://github.com/hanruihua/NeuPAN) neural navigation planner
-- Inspired by minimalist simulator design principles
-- Referred to [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt) codebase for building the minimal simulator
-- Thanks to the ROS2 community
+**Acknowledgments:**
+- Simulator design inspired by [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt)
+- For complete acknowledgments, see [workspace README](../../README.md#acknowledgments)
 
 ---
 

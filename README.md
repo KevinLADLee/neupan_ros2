@@ -32,6 +32,12 @@
 - 🛠️ **Easy Testing**: Pre-configured scenarios for algorithm validation
 - 📦 **Modular Design**: Independent packages for flexibility
 
+### Demo
+
+<div align="center">
+  <img src="imgs/sim-maze.gif" alt="NeuPAN navigating through maze scenario" width="600"/>
+  <p><em>NeuPAN navigating autonomously through a complex maze scenario</em></p>
+</div>
 
 ### Quick Start
 
@@ -108,13 +114,7 @@ source install/setup.bash
 ros2 launch neupan_ros2 sim_diff_launch.py sim_env_config:=scenario_corridor.yaml
 ```
 
-**Alternative scenarios:**
-- `scenario_corridor.yaml` - Corridor navigation (default)
-- `scenario_maze.yaml` - Complex maze
-- `scenario_narrow_passage.yaml` - Narrow passage challenge
-- `scenario_u_trap.yaml` - U-shaped trap
-- `scenario_polygon_random.yaml` - Random obstacles
-- `scenario_empty.yaml` - Open space
+**Alternative scenarios:** See [ddr_minimal_sim scenarios](src/ddr_minimal_sim/README.md#pre-configured-scenarios) for complete list (corridor, maze, narrow_passage, u_trap, polygon_random, empty)
 
 ### Usage Scenarios
 
@@ -141,21 +141,13 @@ ros2 launch neupan_ros2 sim_diff_launch.py sim_env_config:=scenario_maze.yaml
 
 #### 📦 src/neupan_ros2
 
-ROS2 Version [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) implementation 
-
-**Documentation:** [src/neupan_ros2/README.md](src/neupan_ros2/README.md)
+ROS2 implementation of [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) neural navigation planner.
+**[→ Documentation](src/neupan_ros2/README.md)**
 
 #### 📦 src/ddr_minimal_sim
 
-Lightweight differential-drive robot simulator.
-
-**Key Features:**
-- Differential drive kinematics simulation
-- 2D laser scanner with ray-casting
-- Multiple pre-configured scenarios
-- Low computational overhead
-
-**Documentation:** [src/ddr_minimal_sim/README.md](src/ddr_minimal_sim/README.md)
+Lightweight differential-drive robot simulator with laser scanning and pre-configured test scenarios.
+**[→ Documentation](src/ddr_minimal_sim/README.md)**
 
 
 
@@ -174,13 +166,12 @@ colcon build --packages-select ddr_minimal_sim
 
 #### Customization
 
-- **Add new scenarios**: Edit `src/ddr_minimal_sim/config/scenario_*.yaml`
-- **Tune parameters**: Modify `src/neupan_ros2/config/neupan_config/neupan_sim_diff.yaml`
-- **Custom robot**: Create new config files based on existing templates
+- **Simulator scenarios**: See [ddr_minimal_sim development guide](src/ddr_minimal_sim/README.md#development) for custom scenarios
+- **NeuPAN parameters**: Modify `src/neupan_ros2/config/neupan_config/neupan_sim_diff.yaml`
 
 ### Citation
 
-If you use NeuPAN in your research, please cite:
+If you find this code or paper helpful, please kindly star ⭐ this repository and cite our paper:
 
 ```bibtex
 @ARTICLE{10938329,
@@ -227,15 +218,15 @@ This maintains consistency with [NeuPAN-ROS](https://github.com/hanruihua/neupan
 
 ### Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+Contributions welcome! Submit issues or pull requests on [GitHub](https://github.com/KevinLADLee/neupan_ros2).
 
 ### Acknowledgments
 
-- [NeuPAN](https://github.com/hanruihua/NeuPAN) - Official NeuPAN algorithm repository
-- [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) - ROS1 version of NeuPAN
-- [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt) - Reference to building the minimal simulator
-- **ROS2 Integration**: Optimized and tested for [AgileX Limo](https://global.agilex.ai/products/limo-pro) platform by [**HiveMatrix Limited**](mailto:sales@hive-matrix.com).
+- [NeuPAN](https://github.com/hanruihua/NeuPAN) & [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) - Original algorithm
+- [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt) - Simulator reference
+- ROS2 integration optimized for [AgileX Limo](https://global.agilex.ai/products/limo-pro) by [HiveMatrix Limited](mailto:sales@hive-matrix.com)
+  - *Interested in Limo robots or technical support? Contact HiveMatrix - your commercial support empowers continued open-source development*
+
 ---
 
-**Author**: KevinLADLee (kevinladlee@gmail.com)  
-**Repository**: https://github.com/KevinLADLee/neupan_ros2
+**Author**: KevinLADLee (kevinladlee@gmail.com)
