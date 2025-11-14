@@ -193,3 +193,30 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+###############################################################################
+# ROS2 Workspace Specific
+###############################################################################
+
+# ROS2 build artifacts
+install/
+log/
+
+# Colcon build files
+.colcon_install_layout
+
+# Backup files
+*~
+
+# IDE folders
+.vscode/
+.idea/
+
+# Neural network models (optional - uncomment if models are too large for git)
+# *.pth
+# *.pkl
+
+# Temporary files
+*.swp
+*.swo
+*~

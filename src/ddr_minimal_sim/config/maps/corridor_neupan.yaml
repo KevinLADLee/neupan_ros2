@@ -1,0 +1,115 @@
+# Corridor Navigation Map (NeuPAN Style)
+# 2m wide horizontal corridor with obstacle walls inside
+# Map coordinate system: center at origin (-5,-5) to (5,5)
+# Designed for limo vehicle (0.556m × 0.363m)
+
+world:
+  width: 10.0
+  height: 10.0
+
+obstacles:
+  # ===== Boundary Walls (4 walls) =====
+
+  # Bottom boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.4  # Map width + 2*thickness
+      width: 0.2
+    pose:
+      x: 0.0
+      y: -5.0
+      yaw: 0.0
+
+  # Top boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.4
+      width: 0.2
+    pose:
+      x: 0.0
+      y: 5.0
+      yaw: 0.0
+
+  # Left boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.0
+      width: 0.2
+    pose:
+      x: -5.0
+      y: 0.0
+      yaw: 1.5708  # π/2 (90 degrees)
+
+  # Right boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.0
+      width: 0.2
+    pose:
+      x: 5.0
+      y: 0.0
+      yaw: 1.5708  # π/2 (90 degrees)
+
+  # ===== Corridor Walls (2 long parallel walls) =====
+
+  # Top corridor wall (y = +1.0, creating 2m wide corridor)
+  - shape:
+      type: 'rectangle'
+      length: 10.0
+      width: 0.2
+    pose:
+      x: 0.0
+      y: 1.0
+      yaw: 0.0
+
+  # Bottom corridor wall (y = -1.0)
+  - shape:
+      type: 'rectangle'
+      length: 10.0
+      width: 0.2
+    pose:
+      x: 0.0
+      y: -1.0
+      yaw: 0.0
+
+  # ===== Obstacle Walls Inside Corridor (4 walls) =====
+
+  # Wall 1: Vertical wall, left side
+  - shape:
+      type: 'rectangle'
+      length: 1.0
+      width: 0.2
+    pose:
+      x: -3.0
+      y: 0.0
+      yaw: 1.5708  # π/2 (90 degrees)
+
+  # Wall 2: Vertical wall, center-left
+  - shape:
+      type: 'rectangle'
+      length: 1.0
+      width: 0.2
+    pose:
+      x: -0.5
+      y: 0.3
+      yaw: 1.5708  # π/2 (90 degrees)
+
+  # Wall 3: Angled wall (~60°), center-right
+  - shape:
+      type: 'rectangle'
+      length: 1.2
+      width: 0.2
+    pose:
+      x: 2.0
+      y: -0.2
+      yaw: 1.0  # ~57 degrees
+
+  # Wall 4: Angled wall (~240°), right side
+  - shape:
+      type: 'rectangle'
+      length: 1.0
+      width: 0.2
+    pose:
+      x: 4.0
+      y: 0.4
+      yaw: 5  # ~241 degrees

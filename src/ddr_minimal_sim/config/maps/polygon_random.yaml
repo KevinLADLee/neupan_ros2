@@ -1,0 +1,211 @@
+# Polygon Obstacles Map - Random Distribution
+# Various polygon shapes randomly distributed across the map
+# Tests navigation around irregular obstacles
+# Map coordinate system: center at origin (-5,-5) to (5,5)
+# Designed for limo vehicle (0.556m × 0.363m)
+
+world:
+  width: 10.0
+  height: 10.0
+
+obstacles:
+  # ===== Boundary Walls (4 walls) =====
+
+  # Bottom boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.4
+      width: 0.2
+    pose:
+      x: 0.0
+      y: -5.0
+      yaw: 0.0
+
+  # Top boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.4
+      width: 0.2
+    pose:
+      x: 0.0
+      y: 5.0
+      yaw: 0.0
+
+  # Left boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.0
+      width: 0.2
+    pose:
+      x: -5.0
+      y: 0.0
+      yaw: 1.5708  # π/2
+
+  # Right boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.0
+      width: 0.2
+    pose:
+      x: 5.0
+      y: 0.0
+      yaw: 1.5708  # π/2
+
+  # ===== Polygon Obstacles =====
+
+  # Triangle 1 (bottom-left area)
+  - shape:
+      type: 'polygon'
+      points:
+        - [-4.0, -4.0]  # Bottom vertex
+        - [-3.2, -3.0]  # Top-right vertex
+        - [-4.8, -3.0]  # Top-left vertex
+    pose:
+      x: 0.0  # Not used for polygons (points are absolute)
+      y: 0.0
+      yaw: 0.0
+
+  # Triangle 2 (top-right area, pointing right)
+  - shape:
+      type: 'polygon'
+      points:
+        - [3.0, 3.5]   # Left vertex
+        - [4.2, 3.0]   # Bottom-right vertex
+        - [4.2, 4.0]   # Top-right vertex
+    pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+
+  # Quadrilateral 1 (trapezoid, center-left)
+  - shape:
+      type: 'polygon'
+      points:
+        - [-3.5, -0.5]  # Bottom-left
+        - [-2.5, -0.5]  # Bottom-right
+        - [-2.2, 0.5]   # Top-right
+        - [-3.8, 0.5]   # Top-left
+    pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+
+  # Quadrilateral 2 (diamond shape, bottom-right)
+  - shape:
+      type: 'polygon'
+      points:
+        - [2.5, -2.5]   # Left vertex
+        - [3.0, -3.0]   # Bottom vertex
+        - [3.5, -2.5]   # Right vertex
+        - [3.0, -2.0]   # Top vertex
+    pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+
+  # Pentagon 1 (top-left area)
+  - shape:
+      type: 'polygon'
+      points:
+        - [-2.5, 2.5]   # Bottom vertex
+        - [-1.8, 2.3]   # Bottom-right
+        - [-1.5, 3.0]   # Right vertex
+        - [-2.0, 3.5]   # Top vertex
+        - [-2.8, 3.0]   # Left vertex
+    pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+
+  # Pentagon 2 (center area)
+  - shape:
+      type: 'polygon'
+      points:
+        - [0.0, -1.0]   # Bottom vertex
+        - [0.5, -0.5]   # Bottom-right
+        - [0.3, 0.2]    # Right vertex
+        - [-0.3, 0.2]   # Left vertex
+        - [-0.5, -0.5]  # Bottom-left
+    pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+
+  # Hexagon 1 (right side)
+  - shape:
+      type: 'polygon'
+      points:
+        - [3.0, 0.5]    # Left vertex
+        - [3.3, 0.0]    # Bottom-left
+        - [3.8, 0.0]    # Bottom-right
+        - [4.1, 0.5]    # Right vertex
+        - [3.8, 1.0]    # Top-right
+        - [3.3, 1.0]    # Top-left
+    pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+
+  # Hexagon 2 (left side, rotated)
+  - shape:
+      type: 'polygon'
+      points:
+        - [-4.0, 1.5]   # Bottom vertex
+        - [-3.5, 1.3]   # Bottom-right
+        - [-3.2, 1.8]   # Right vertex
+        - [-3.5, 2.3]   # Top-right
+        - [-4.0, 2.5]   # Top vertex
+        - [-4.5, 2.0]   # Left vertex
+    pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+
+  # L-shaped polygon (bottom-center)
+  - shape:
+      type: 'polygon'
+      points:
+        - [0.5, -4.5]   # Bottom-left
+        - [1.5, -4.5]   # Bottom-right of horizontal part
+        - [1.5, -3.8]   # Mid-right
+        - [1.0, -3.8]   # Inner corner bottom
+        - [1.0, -3.0]   # Top-right of vertical part
+        - [0.5, -3.0]   # Top-left
+    pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+
+  # Star-like polygon (5-pointed, upper-center)
+  - shape:
+      type: 'polygon'
+      points:
+        - [0.0, 4.5]    # Top point
+        - [-0.2, 4.0]   # Top-left inner
+        - [-0.6, 3.8]   # Left point
+        - [-0.2, 3.5]   # Bottom-left inner
+        - [0.0, 3.0]    # Bottom point
+        - [0.2, 3.5]    # Bottom-right inner
+        - [0.6, 3.8]    # Right point
+        - [0.2, 4.0]    # Top-right inner
+    pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+
+  # Additional small circle obstacles for variety
+  - shape:
+      type: 'circle'
+      radius: 0.25
+    pose:
+      x: -1.5
+      y: -3.5
+      yaw: 0.0
+
+  - shape:
+      type: 'circle'
+      radius: 0.20
+    pose:
+      x: 2.0
+      y: 2.0
+      yaw: 0.0

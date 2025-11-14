@@ -1,0 +1,35 @@
+# NeuPAN Simulation Configuration
+# Configuration for ddr_minimal_sim simulator integration
+
+neupan_node:
+  ros__parameters:
+    use_sim_time: true
+    # ========== NeuPAN Configuration Files ==========
+    neupan_config_file: 'neupan_sim_diff.yaml'  # Planner configuration
+    dune_checkpoint_file: 'model_5000.pth'       # Neural network model
+
+    # ========== TF Frame Configuration (Adapted for Simulator) ==========
+    map_frame: 'map'           # Global map coordinate frame
+    base_frame: 'base_link'    # Robot base frame (matches ddr_minimal_sim)
+    lidar_frame: 'base_link'   # LiDAR frame (matches ddr_minimal_sim)
+
+    # ========== Visualization Configuration ==========
+    marker_size: 0.05          # DUNE/NRMP point marker size
+    marker_z: 0.3              # Robot marker height (adapted for small robot)
+
+    # ========== Laser Scan Processing Configuration ==========
+    scan_angle_max: 3.14       # Maximum scan angle (180 degrees)
+    scan_angle_min: -3.14      # Minimum scan angle (-180 degrees)
+    scan_downsample: 1         # Scan downsampling rate (1=use all points)
+    scan_range_max: 5.0        # Maximum scan distance (meters)
+    scan_range_min: 0.01       # Minimum scan distance (meters)
+
+    # ========== Path Planning Configuration ==========
+    flip_angle: false                       # Whether to flip scan angles
+    refresh_initial_path: true              # Refresh path when receiving new path
+    include_initial_path_direction: false   # Use point gradient to calculate direction
+
+# Simulator parameter notes (for launch file, not ROS parameters):
+# - robot_config: Robot configuration (scout_mini/custom_robot)
+# - map_config: Map configuration (obs/obs_exam/obs1)
+# - use_rviz: Whether to launch RViz
