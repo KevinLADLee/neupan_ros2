@@ -1,0 +1,86 @@
+# U-Trap Navigation Map
+# U-shaped trap to test local minima escape
+# Opening faces downward (toward negative y)
+# Map coordinate system: center at origin (-5,-5) to (5,5)
+# Designed for limo vehicle (0.556m × 0.363m)
+
+world:
+  width: 10.0
+  height: 10.0
+
+obstacles:
+  # ===== Boundary Walls (4 walls) =====
+
+  # Bottom boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.4
+      width: 0.2
+    pose:
+      x: 0.0
+      y: -5.0
+      yaw: 0.0
+
+  # Top boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.4
+      width: 0.2
+    pose:
+      x: 0.0
+      y: 5.0
+      yaw: 0.0
+
+  # Left boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.0
+      width: 0.2
+    pose:
+      x: -5.0
+      y: 0.0
+      yaw: 1.5708  # π/2
+
+  # Right boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.0
+      width: 0.2
+    pose:
+      x: 5.0
+      y: 0.0
+      yaw: 1.5708  # π/2
+
+  # ===== U-Trap Structure (3 walls) =====
+  # Trap dimensions: 2m wide × 4m tall
+  # Opening faces downward for robot to escape
+
+  # Left wall of U-trap
+  - shape:
+      type: 'rectangle'
+      length: 4.0  # trap_height
+      width: 0.2   # wall_thickness
+    pose:
+      x: -1.0      # -trap_width/2 = -2.0/2
+      y: 0.0       # centered vertically
+      yaw: 1.5708  # π/2 (vertical)
+
+  # Right wall of U-trap
+  - shape:
+      type: 'rectangle'
+      length: 4.0  # trap_height
+      width: 0.2   # wall_thickness
+    pose:
+      x: 1.0       # +trap_width/2 = +2.0/2
+      y: 0.0       # centered vertically
+      yaw: 1.5708  # π/2 (vertical)
+
+  # Top wall of U-trap (closing the U)
+  - shape:
+      type: 'rectangle'
+      length: 2.0  # trap_width
+      width: 0.2   # wall_thickness
+    pose:
+      x: 0.0       # centered horizontally
+      y: 2.0       # +trap_height/2 = +4.0/2
+      yaw: 0.0     # horizontal

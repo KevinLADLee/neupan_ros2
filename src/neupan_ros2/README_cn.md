@@ -52,61 +52,64 @@ sudo apt install ros-humble-rviz2 \
 ```
 
 #### Python 依赖
+
+⚠️ **重要**：NeuPAN 需要 numpy < 2.0
+
 ```bash
 # PyTorch（根据您的配置选择 CPU 或 GPU 版本）
+# 访问 https://pytorch.org 了解安装选项
 pip3 install torch torchvision
 
 # NeuPAN 核心库
 pip3 install neupan
 
-# 其他 Python 包
-pip3 install numpy scipy matplotlib pyyaml
+# 其他 Python 包（注意 numpy 版本要求）
+pip3 install "numpy<2.0" scipy matplotlib pyyaml
 ```
+
+详细的 Python 环境设置请参考官方 NeuPAN 仓库：
+**https://github.com/hanruihua/NeuPAN**
 
 ### 可选依赖
 
-- **仿真环境**：[ddr_minimal_sim](https://github.com/KevinLADLee/ddr_minimal_sim)（差速驱动机器人仿真器）
+- **仿真环境**：[ddr_minimal_sim](../ddr_minimal_sim)（包含在本工作空间中）
 - **Limo 机器人**：AgileX Limo ROS2 驱动软件包
 
 ---
 
 ## 🚀 安装步骤
 
-### 步骤 1：创建 ROS2 工作空间
+> **注意**：此软件包现已成为 NeuPAN ROS2 工作空间的一部分。完整安装说明请参见[工作空间 README](../../README.md)。
+
+### 快速安装（作为工作空间的一部分）
+
+此软件包已与 ddr_minimal_sim 一起包含在 NeuPAN ROS2 工作空间中。安装步骤：
 
 ```bash
-mkdir -p ~/neupan_ws/src
-cd ~/neupan_ws/src
-```
-
-### 步骤 2：克隆仓库
-
-```bash
+# 克隆工作空间
 git clone https://github.com/KevinLADLee/neupan_ros2.git
-cd ~/neupan_ws
-```
+cd neupan_ros2
 
-### 步骤 3：安装 NeuPAN 软件包
+# 安装系统依赖
+chmod +x setup.sh
+./setup.sh
 
-```bash
-# 安装 NeuPAN 核心算法库
+# 安装 Python 依赖（参见上述要求）
 pip3 install neupan
-```
+pip3 install torch torchvision
+pip3 install "numpy<2.0" scipy matplotlib pyyaml
 
-### 步骤 4：编译工作空间
+# 构建工作空间
+chmod +x build.sh
+./build.sh
 
-```bash
-cd ~/neupan_ws
-colcon build --symlink-install
+# Source 工作空间
 source install/setup.bash
 ```
 
-### 步骤 5：验证安装
+详细的安装、故障排除和使用说明，请参阅[工作空间 README](../../README.md)。
 
-```bash
-ros2 pkg list | grep neupan
-# 应输出：neupan_ros2
-```
+---
 
 ---
 

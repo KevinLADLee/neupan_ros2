@@ -1,0 +1,164 @@
+# Simple Maze Map
+# Grid-based maze with walls and circular obstacles
+# Map coordinate system: center at origin (-5,-5) to (5,5)
+# Designed for limo vehicle (0.556m × 0.363m)
+
+world:
+  width: 10.0
+  height: 10.0
+
+obstacles:
+  # ===== Boundary Walls (4 walls) =====
+
+  # Bottom boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.4
+      width: 0.2
+    pose:
+      x: 0.0
+      y: -5.0
+      yaw: 0.0
+
+  # Top boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.4
+      width: 0.2
+    pose:
+      x: 0.0
+      y: 5.0
+      yaw: 0.0
+
+  # Left boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.0
+      width: 0.2
+    pose:
+      x: -5.0
+      y: 0.0
+      yaw: 1.5708  # π/2
+
+  # Right boundary wall
+  - shape:
+      type: 'rectangle'
+      length: 10.0
+      width: 0.2
+    pose:
+      x: 5.0
+      y: 0.0
+      yaw: 1.5708  # π/2
+
+  # ===== Vertical Maze Walls =====
+
+  # Left vertical wall (partial, with gap at top)
+  - shape:
+      type: 'rectangle'
+      length: 4.0
+      width: 0.2
+    pose:
+      x: -2.0
+      y: -1.0
+      yaw: 1.5708  # π/2 (vertical)
+
+  # Right vertical wall (partial, with gap at bottom)
+  - shape:
+      type: 'rectangle'
+      length: 4.0
+      width: 0.2
+    pose:
+      x: 2.0
+      y: 1.0
+      yaw: 1.5708  # π/2 (vertical)
+
+  # ===== Horizontal Maze Walls =====
+
+  # Top horizontal wall (partial, left side)
+  - shape:
+      type: 'rectangle'
+      length: 3.0
+      width: 0.2
+    pose:
+      x: -2.5
+      y: 2.0
+      yaw: 0.0
+
+  # Bottom horizontal wall (partial, right side)
+  - shape:
+      type: 'rectangle'
+      length: 3.0
+      width: 0.2
+    pose:
+      x: 2.5
+      y: -2.0
+      yaw: 0.0
+
+  # ===== Circular Obstacles in Chambers =====
+
+  # Bottom-left chamber
+  - shape:
+      type: 'circle'
+      radius: 0.30
+    pose:
+      x: -3.5
+      y: -3.5
+      yaw: 0.0
+
+  # Center chamber
+  - shape:
+      type: 'circle'
+      radius: 0.35
+    pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+
+  # Top-left chamber
+  - shape:
+      type: 'circle'
+      radius: 0.25
+    pose:
+      x: -3.0
+      y: 3.5
+      yaw: 0.0
+
+  # Bottom-right chamber
+  - shape:
+      type: 'circle'
+      radius: 0.30
+    pose:
+      x: 3.5
+      y: -3.0
+      yaw: 0.0
+
+  # Top-right chamber
+  - shape:
+      type: 'circle'
+      radius: 0.25
+    pose:
+      x: 3.5
+      y: 3.5
+      yaw: 0.0
+
+  # ===== Additional Walls for Complexity =====
+
+  # Small vertical wall, left side
+  - shape:
+      type: 'rectangle'
+      length: 2.5
+      width: 0.2
+    pose:
+      x: -3.5
+      y: 0.0
+      yaw: 1.5708  # π/2
+
+  # Small vertical wall, right side
+  - shape:
+      type: 'rectangle'
+      length: 2.5
+      width: 0.2
+    pose:
+      x: 3.5
+      y: 0.0
+      yaw: 1.5708  # π/2

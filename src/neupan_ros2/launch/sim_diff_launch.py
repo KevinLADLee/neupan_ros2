@@ -25,7 +25,7 @@ def generate_launch_description() -> LaunchDescription:
 
     sim_env_config_arg = DeclareLaunchArgument(
         'sim_env_config',
-        default_value='scenario_corridor.yaml',
+        default_value='scenario_maze.yaml',
         description='Simulation environment configuration file (in ddr_minimal_sim/config/)'
     )
 

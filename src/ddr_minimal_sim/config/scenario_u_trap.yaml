@@ -1,0 +1,64 @@
+# Scenario Configuration - U-Trap
+# Tests local minima escape for path planning algorithms
+
+simulator:
+  ros__parameters:
+    # ========== Initial Pose ==========
+    initial_pose:
+      x: 0.0              # Initial x position (meters) - inside U-trap
+      y: -3.0             # Initial y position (meters) - at bottom of trap
+      yaw: 1.5708         # Initial yaw angle (radians) - facing upward (π/2)
+
+    # ========== Simulation Settings ==========
+    update_frequency: 20.0   # Simulator update rate (Hz)
+    publish_rate: 20.0        # State publish rate (Hz)
+    enable_noise: false       # Enable velocity noise
+    noise_std_v: 0.01         # Linear velocity noise std dev
+    noise_std_omega: 0.02     # Angular velocity noise std dev
+
+    # ========== Vehicle Physical Dimensions ==========
+    vehicle:
+      length: 0.322           # Vehicle length (m) - limo
+      width: 0.22            # Vehicle width (m) - limo
+      height: 0.20           # Vehicle height (m)
+
+    # ========== Dynamics Constraints ==========
+    dynamics:
+      max_linear_velocity: 1.5        # Max linear velocity (m/s)
+      max_angular_velocity: 3.0       # Max angular velocity (rad/s)
+      max_linear_acceleration: 2.0    # Max linear acceleration (m/s^2)
+      max_angular_acceleration: 4.0   # Max angular acceleration (rad/s^2)
+
+    # ========== Visualization ==========
+    visualization:
+      show_trajectory: true           # Show trajectory history
+      trajectory_length: 400          # Number of trajectory points to keep
+
+environment:
+  ros__parameters:
+    map:
+      width: 10.0                     # Map width (m)
+      height: 10.0                    # Map height (m)
+      resolution: 0.05                # Grid resolution (m)
+      generation_mode: 'file'         # Load from YAML file
+      map_file: 'u_trap.yaml'         # U-trap map for local minima testing
+
+    visualization:
+      obstacle_height: 2.0            # Obstacle height for visualization (m)
+      marker_alpha: 0.8               # Obstacle transparency (0-1)
+
+laser_simulator:
+  ros__parameters:
+    # ========== Laser Scanner Parameters ==========
+    laser:
+      range_min: 0.15              # Minimum range (m)
+      range_max: 12.0              # Maximum range (m)
+      angle_min: -3.14159          # Minimum angle (rad)
+      angle_max: 3.14159           # Maximum angle (rad)
+      angle_increment: 0.00872665  # Angular resolution (rad) ~0.5 degrees
+      scan_time: 0.1               # Time between scans (s)
+      frame_id: 'base_link'        # Laser scanner frame ID
+
+    noise:
+      enable_noise: true           # Enable range measurement noise
+      noise_std_dev: 0.01          # Range measurement noise std dev (m)
