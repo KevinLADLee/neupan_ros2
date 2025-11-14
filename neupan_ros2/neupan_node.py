@@ -9,8 +9,11 @@ Date: 2025.04.08
 from math import sin, cos, atan2
 import numpy as np
 
-from neupan import neupan
-from neupan.util import get_transform
+try:
+    from neupan import neupan
+    from neupan.util import get_transform
+except ImportError as e:
+    raise ImportError(f"Failed to import 'neupan' package: {e}. Please install neupan first.") from e
 
 import time
 import os

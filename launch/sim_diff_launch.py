@@ -25,7 +25,7 @@ def generate_launch_description() -> LaunchDescription:
 
     sim_env_config_arg = DeclareLaunchArgument(
         'sim_env_config',
-        default_value='sim_env_obs_exam.yaml',
+        default_value='scenario_corridor.yaml',
         description='Simulation environment configuration file (in ddr_minimal_sim/config/)'
     )
 
@@ -48,7 +48,7 @@ def generate_launch_description() -> LaunchDescription:
     rviz_config = os.path.join(
         get_package_share_directory('neupan_ros2'),
         'rviz',
-        'neupan.rviz'
+        'neupan_sim.rviz'
     )
 
     logger.info(f"Using NeuPAN config: {neupan_config}")
