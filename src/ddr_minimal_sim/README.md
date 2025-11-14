@@ -138,42 +138,6 @@ environment:
 - `odom` -> `base_link` (dynamic, published by simulator_node)
 - `base_link` -> `laser_link` (static identity transform)
 
-## Integration with Navigation Stacks
-
-### With NeuPAN
-
-See [NeuPAN integration guide](../neupan_ros2/README.md).
-
-### With Nav2
-
-```python
-# Example launch file snippet
-from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
-
-def generate_launch_description():
-    return LaunchDescription([
-        # Include DDR simulator
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource([
-                FindPackageShare('ddr_minimal_sim'),
-                '/launch/complete_sim.launch.py'
-            ]),
-            launch_arguments={'sim_env_config': 'scenario_maze.yaml'}.items()
-        ),
-
-        # Your navigation stack nodes
-        # ...
-    ])
-```
-
-## Building
-
-```bash
-# From workspace root
-colcon build --packages-select ddr_minimal_sim
-```
-
 ## Dependencies
 
 - **ROS2**: Humble or later
@@ -261,7 +225,7 @@ See the main workspace [LICENSE](../../LICENSE) file for license information.
 ## Author
 
 **KevinLADLee**
-GitHub: https://github.com/KevinLADLee/ddr_minimal_sim
+GitHub: https://github.com/KevinLADLee
 
 ## Contributing
 
