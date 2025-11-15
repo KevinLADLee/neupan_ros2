@@ -77,7 +77,7 @@ obstacles:
   # Wall 1: Vertical wall, left side
   - shape:
       type: 'rectangle'
-      length: 1.0
+      length: 0.9
       width: 0.2
     pose:
       x: -3.0
@@ -91,7 +91,7 @@ obstacles:
       width: 0.2
     pose:
       x: -0.5
-      y: 0.3
+      y: 0.4
       yaw: 1.5708  # π/2 (90 degrees)
 
   # Wall 3: Angled wall (~60°), center-right

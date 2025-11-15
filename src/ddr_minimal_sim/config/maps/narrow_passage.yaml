@@ -62,7 +62,7 @@ obstacles:
       width: 0.2   # wall_thickness
     pose:
       x: 0.0       # centered horizontally
-      y: 0.275     # +passage_width/2 = +0.55/2
+      y: 0.29     # 
       yaw: 0.0     # horizontal
 
   # Bottom wall of passage
@@ -72,5 +72,5 @@ obstacles:
       width: 0.2   # wall_thickness
     pose:
       x: 0.0       # centered horizontally
-      y: -0.275    # -passage_width/2 = -0.55/2
+      y: -0.29    # 
       yaw: 0.0     # horizontal

@@ -49,6 +49,7 @@ echo ""
 echo -e "${YELLOW}[2/3] Installing ROS2 package dependencies...${NC}"
 sudo apt update
 sudo apt install -y \
+    ros-$ROS_DISTRO-tf-transformations \
     ros-$ROS_DISTRO-tf2-tools \
     ros-$ROS_DISTRO-tf2-ros \
     ros-$ROS_DISTRO-tf2-geometry-msgs \
@@ -91,10 +92,10 @@ echo ""
 echo -e "Typical installation includes:"
 echo -e "  - PyTorch (CPU or GPU version)"
 echo -e "  - neupan package"
-echo -e "  - numpy (<2.0), scipy, matplotlib, etc."
+echo -e "  - numpy<2.0, scipy, matplotlib, etc."
 echo ""
 echo -e "${YELLOW}Important:${NC} NeuPAN requires numpy < 2.0"
-echo -e "           Install with: ${YELLOW}pip3 install \"numpy<2.0\" scipy matplotlib pyyaml${NC}"
+echo -e "           If you are Ubuntu 22.04, install with: \n${YELLOW}pip3 install numpy==1.26.4 scipy matplotlib pyyaml${NC}"
 echo ""
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""

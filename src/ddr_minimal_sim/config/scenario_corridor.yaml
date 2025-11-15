@@ -55,7 +55,7 @@ laser_simulator:
       range_max: 8.0              # Maximum range (m)
       angle_min: -3.14159          # Minimum angle (rad)
       angle_max: 3.14159           # Maximum angle (rad)
-      angle_increment: 0.00872665  # Angular resolution (rad) ~0.5 degrees
+      angle_increment: 0.01  # Angular resolution (rad) ~0.5 degrees
       scan_time: 0.1               # Time between scans (s)
       frame_id: 'base_link'        # Laser scanner frame ID
 
