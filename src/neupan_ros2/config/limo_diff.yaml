@@ -16,3 +16,10 @@ neupan_node:
     refresh_initial_path: true
     include_initial_path_direction: false
 
+    # ========== Topic Configuration (Optional) ==========
+    # Uncomment and modify to customize topic names for your robot
+    # cmd_vel_topic: '/neupan_cmd_vel'
+    # scan_topic: '/scan'
+    # plan_input_topic: '/plan'
+    # goal_topic: '/goal_pose'
+

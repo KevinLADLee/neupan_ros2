@@ -5,8 +5,9 @@
   <version>1.0.0</version>
   <description>Minimal differential drive robot simulator with configurable parameters</description>
 
-  <maintainer email="your_email@example.com">Your Name</maintainer>
-  <license>MIT</license>
+  <maintainer email="kevinladlee@gmail.com">kevinlad</maintainer>
+  <license>GPL-3.0</license>
+
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

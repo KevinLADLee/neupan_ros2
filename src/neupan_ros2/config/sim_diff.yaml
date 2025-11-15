@@ -29,6 +29,19 @@ neupan_node:
     refresh_initial_path: true              # Refresh path when receiving new path
     include_initial_path_direction: false   # Use point gradient to calculate direction
 
+    # ========== Topic Configuration (Optional) ==========
+    # Uncomment and modify to customize topic names for integration
+    # cmd_vel_topic: '/neupan_cmd_vel'        # Velocity command output
+    # scan_topic: '/scan'                     # Laser scan input
+    # plan_input_topic: '/plan'               # Global path input
+    # goal_topic: '/goal_pose'                # Goal pose input
+    # plan_output_topic: '/neupan_plan'       # Optimized trajectory output
+    # ref_state_topic: '/neupan_ref_state'    # Reference state output
+    # initial_path_topic: '/neupan_initial_path'  # Initial path visualization
+    # dune_markers_topic: '/dune_point_markers'   # DUNE visualization
+    # robot_marker_topic: '/robot_marker'         # Robot footprint marker
+    # nrmp_markers_topic: '/nrmp_point_markers'   # NRMP visualization
+
 # Simulator parameter notes (for launch file, not ROS parameters):
 # - robot_config: Robot configuration (scout_mini/custom_robot)
 # - map_config: Map configuration (obs/obs_exam/obs1)

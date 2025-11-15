@@ -174,6 +174,8 @@ config/
 
 ### 关键参数
 
+#### 核心参数
+
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
 | `use_sim_time` | 使用仿真时间 | `true`/`false` |
@@ -186,6 +188,23 @@ config/
 | `ref_speed` | 参考导航速度（米/秒） | `0.5` |
 | `collision_threshold` | 碰撞避障阈值（米） | `0.01` |
 
+#### 话题配置参数（新增）
+
+所有话题名称现在均可通过 ROS 参数进行配置，以实现灵活集成：
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `cmd_vel_topic` | 速度命令输出话题 | `/neupan_cmd_vel` |
+| `scan_topic` | 激光扫描输入话题 | `/scan` |
+| `plan_input_topic` | 全局路径输入话题 | `/plan` |
+| `goal_topic` | 目标位姿输入话题 | `/goal_pose` |
+| `plan_output_topic` | 优化轨迹输出话题 | `/neupan_plan` |
+| `ref_state_topic` | 参考状态输出话题 | `/neupan_ref_state` |
+| `initial_path_topic` | 初始路径可视化话题 | `/neupan_initial_path` |
+| `dune_markers_topic` | DUNE 可视化标记话题 | `/dune_point_markers` |
+| `robot_marker_topic` | 机器人轮廓标记话题 | `/robot_marker` |
+| `nrmp_markers_topic` | NRMP 可视化标记话题 | `/nrmp_point_markers` |
+
 完整参数文档请参见 [config/sim_diff.yaml](config/sim_diff.yaml)。
 
 ---
@@ -193,6 +212,8 @@ config/
 ## 📚 文档说明
 
 ### ROS2 话题
+
+> **注意**：所有话题名称均可通过 ROS 参数进行配置。下表显示的是默认值。要自定义话题名称，请参见[话题配置参数](#话题配置参数新增)部分。
 
 #### 订阅话题
 | 话题 | 类型 | 说明 |
@@ -265,7 +286,7 @@ map
 
 ## 🤝 致谢
 
-- **NeuPAN 原始算法**：由香港大学 [Ruihua HAN](https://github.com/hanruihua) 及`SIAT-INVS`团队开发
+- **NeuPAN 原始算法**：由香港大学 [Ruihua HAN](https://github.com/hanruihua) 及[SIAT-INVS](https://siat-invs.com/)团队开发
 - **ROS2 集成**：针对 AgileX Limo 平台优化和测试
 - **硬件合作伙伴**：AgileX x Hive Matrix（[sales@hive-matrix.com](mailto:sales@hive-matrix.com)）
 

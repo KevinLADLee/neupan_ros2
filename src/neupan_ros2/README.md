@@ -179,6 +179,8 @@ config/
 
 ### Key Parameters
 
+#### Core Parameters
+
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `use_sim_time` | Use simulation time | `true`/`false` |
@@ -191,6 +193,23 @@ config/
 | `ref_speed` | Reference navigation speed (m/s) | `0.5` |
 | `collision_threshold` | Collision avoidance threshold (m) | `0.01` |
 
+#### Topic Configuration Parameters (NEW)
+
+All topic names are now configurable via ROS parameters for flexible integration:
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `cmd_vel_topic` | Velocity command output topic | `/neupan_cmd_vel` |
+| `scan_topic` | Laser scan input topic | `/scan` |
+| `plan_input_topic` | Global path input topic | `/plan` |
+| `goal_topic` | Goal pose input topic | `/goal_pose` |
+| `plan_output_topic` | Optimized trajectory output topic | `/neupan_plan` |
+| `ref_state_topic` | Reference state output topic | `/neupan_ref_state` |
+| `initial_path_topic` | Initial path visualization topic | `/neupan_initial_path` |
+| `dune_markers_topic` | DUNE visualization markers topic | `/dune_point_markers` |
+| `robot_marker_topic` | Robot footprint marker topic | `/robot_marker` |
+| `nrmp_markers_topic` | NRMP visualization markers topic | `/nrmp_point_markers` |
+
 For complete parameter documentation, see [config/sim_diff.yaml](config/sim_diff.yaml).
 
 ---
@@ -198,6 +217,8 @@ For complete parameter documentation, see [config/sim_diff.yaml](config/sim_diff
 ## 📚 Documentation
 
 ### ROS2 Topics
+
+> **Note**: All topic names are configurable via ROS parameters. The topics listed below show default values. To customize topic names, see the [Topic Configuration Parameters](#topic-configuration-parameters-new) section.
 
 #### Subscribed Topics
 | Topic | Type | Description |
@@ -270,7 +291,7 @@ If you find this code or paper helpful, please kindly star ⭐ this repository a
 
 ## 🤝 Acknowledgments
 
-- **Original NeuPAN Algorithm**: Developed by [Ruihua HAN](https://github.com/hanruihua) and `SIAT-INVS` Team.
+- **Original NeuPAN Algorithm**: Developed by [Ruihua HAN](https://github.com/hanruihua) and [SIAT-INVS](https://siat-invs.com/) Team.
 - **ROS2 Integration**: Optimized and tested for AgileX Limo platform
 - **Hardware Partner**: AgileX x Hive Matrix ([sales@hive-matrix.com](mailto:sales@hive-matrix.com))
 

@@ -183,6 +183,10 @@ Key classes to modify:
 - Simplified collision detection (uses robot footprint)
 - No sensor noise models beyond Gaussian
 
+## Future Optimizations
+
+- **Occupancy grid generation** (`environment_node.cpp:220-232`): Current O(n×m) implementation causes ~1-2s startup on low-power platforms. Consider spatial indexing (R-tree/spatial hash) if needed for larger maps or finer resolutions.
+
 ## Troubleshooting
 
 **Problem:** Robot doesn't move when publishing to `/cmd_vel`

@@ -56,6 +56,18 @@ class neupan_core(Node):
         self.declare_parameter("flip_angle", False)
         self.declare_parameter("include_initial_path_direction", False)
 
+        # Topic names (configurable for flexibility)
+        self.declare_parameter("cmd_vel_topic", "/neupan_cmd_vel")
+        self.declare_parameter("plan_output_topic", "/neupan_plan")
+        self.declare_parameter("ref_state_topic", "/neupan_ref_state")
+        self.declare_parameter("initial_path_topic", "/neupan_initial_path")
+        self.declare_parameter("dune_markers_topic", "/dune_point_markers")
+        self.declare_parameter("robot_marker_topic", "/robot_marker")
+        self.declare_parameter("nrmp_markers_topic", "/nrmp_point_markers")
+        self.declare_parameter("scan_topic", "/scan")
+        self.declare_parameter("plan_input_topic", "/plan")
+        self.declare_parameter("goal_topic", "/goal_pose")
+
         self.planner_config_file = os.path.join(self.pkg_dir, "config", "neupan_config",  
                                                 self.get_parameter("neupan_config_file").get_parameter_value().string_value)
         self.map_frame = self.get_parameter("map_frame").get_parameter_value().string_value
@@ -100,15 +112,43 @@ class neupan_core(Node):
         self.stop = False
 
         # Publishers
-        self.vel_pub = self.create_publisher(Twist, "/neupan_cmd_vel", 10)
-        self.plan_pub = self.create_publisher(Path, "/neupan_plan", 10)
-        self.ref_state_pub = self.create_publisher(Path, "/neupan_ref_state", 10)
-        self.ref_path_pub = self.create_publisher(Path, "/neupan_initial_path", 10)
+        self.vel_pub = self.create_publisher(
+            Twist,
+            self.get_parameter("cmd_vel_topic").get_parameter_value().string_value,
+            10
+        )
+        self.plan_pub = self.create_publisher(
+            Path,
+            self.get_parameter("plan_output_topic").get_parameter_value().string_value,
+            10
+        )
+        self.ref_state_pub = self.create_publisher(
+            Path,
+            self.get_parameter("ref_state_topic").get_parameter_value().string_value,
+            10
+        )
+        self.ref_path_pub = self.create_publisher(
+            Path,
+            self.get_parameter("initial_path_topic").get_parameter_value().string_value,
+            10
+        )
 
         # For RViz visualization
-        self.point_markers_pub_dune = self.create_publisher(MarkerArray, "/dune_point_markers", 10)
-        self.robot_marker_pub = self.create_publisher(Marker, "/robot_marker", 10)
-        self.point_markers_pub_nrmp = self.create_publisher(MarkerArray, "/nrmp_point_markers", 10)
+        self.point_markers_pub_dune = self.create_publisher(
+            MarkerArray,
+            self.get_parameter("dune_markers_topic").get_parameter_value().string_value,
+            10
+        )
+        self.robot_marker_pub = self.create_publisher(
+            Marker,
+            self.get_parameter("robot_marker_topic").get_parameter_value().string_value,
+            10
+        )
+        self.point_markers_pub_nrmp = self.create_publisher(
+            MarkerArray,
+            self.get_parameter("nrmp_markers_topic").get_parameter_value().string_value,
+            10
+        )
 
         # TF listener
         self.tf_buffer = tf2_ros.Buffer()
@@ -116,9 +156,24 @@ class neupan_core(Node):
 
         # Subscribers
         scan_qos_profile = QoSProfile(depth=10, reliability=QoSReliabilityPolicy.BEST_EFFORT)
-        self.create_subscription(LaserScan, "/scan", self.scan_callback, scan_qos_profile)
-        self.create_subscription(Path, "/plan", self.path_callback, 10)
-        self.create_subscription(PoseStamped, "/goal_pose", self.goal_callback, 10)
+        self.create_subscription(
+            LaserScan,
+            self.get_parameter("scan_topic").get_parameter_value().string_value,
+            self.scan_callback,
+            scan_qos_profile
+        )
+        self.create_subscription(
+            Path,
+            self.get_parameter("plan_input_topic").get_parameter_value().string_value,
+            self.path_callback,
+            10
+        )
+        self.create_subscription(
+            PoseStamped,
+            self.get_parameter("goal_topic").get_parameter_value().string_value,
+            self.goal_callback,
+            10
+        )
         
         time_period = 0.02
         self.create_timer(time_period, self.run)
