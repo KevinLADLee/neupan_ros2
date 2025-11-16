@@ -27,8 +27,11 @@ setup(
     zip_safe=True,
     maintainer='kevinlad',
     maintainer_email='kevinladlee@gmail.com',
-    description='NeuPAN: Neural Proximal Alternating Network for autonomous robot navigation with ROS2 integration',
-    license='Apache-2.0',
+    description=(
+        'NeuPAN: Neural Proximal Alternating Network for '
+        'autonomous robot navigation with ROS2 integration'
+    ),
+    license='GPL-3.0',
     # tests_require=['pytest'],
     keywords=['ROS'],
     entry_points={
