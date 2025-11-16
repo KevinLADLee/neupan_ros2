@@ -31,6 +31,9 @@
 - 🔄 **仿真到真机**: 在仿真和物理机器人（如 Limo）之间无缝切换
 - 🛠️ **易于测试**: 预配置场景用于算法验证
 - 📦 **模块化设计**: 独立包设计，使用灵活
+- 🔒 **线程安全**: 多线程架构与状态保护，确保稳定运行
+- 🎨 **可选可视化**: 可配置的 RViz 标记，优化嵌入式平台性能
+- ⚙️ **CI/CD 就绪**: 基于 Docker 的自动化测试和构建验证
 
 ### 演示
 
@@ -167,6 +170,20 @@ colcon build --packages-select ddr_minimal_sim
 
 - **仿真器场景**: 参见 [ddr_minimal_sim 开发指南](src/ddr_minimal_sim/README.md#development) 了解自定义场景
 - **NeuPAN 参数**: 修改 `src/neupan_ros2/config/neupan_config/neupan_sim_diff.yaml`
+
+### 持续集成
+
+[![ROS2 CI](https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml/badge.svg)](https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml)
+
+每次推送和拉取请求时自动测试：
+
+- **构建验证**: 在 Ubuntu 22.04 + ROS2 Humble 环境下编译工作空间
+- **代码质量**: flake8 和 pep257 代码检查，并生成 GitHub 注释
+- **Docker 构建**: 使用官方 ROS2 容器实现可重现构建
+- **优化缓存**: 快速 CI 运行（缓存命中时约 30 秒）
+- **工作空间验证**: 检测重复包和工作空间问题
+
+详细的工作流程信息请参见 [CI/CD 文档](.github/CI_README.md)。
 
 ### 引用
 
