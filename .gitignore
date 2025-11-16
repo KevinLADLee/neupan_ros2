@@ -224,3 +224,20 @@ ros_ws/
 # Temporary files
 *.swp
 *.swo
+
+# Security-sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+*.p7b
+*.cer
+*.crt
+*.der
+id_rsa*
+id_dsa*
+id_ed25519*
+id_ecdsa*
+credentials*
+secrets*
+*.secrets
