@@ -1,0 +1,44 @@
+[MASTER]
+# Use multiple processes to speed up Pylint
+jobs=0
+
+[MESSAGES CONTROL]
+# Disable specific warnings that are too strict for ROS2 projects
+disable=
+    C0103,  # Invalid constant name (allow single letter variables like x, y, z)
+    C0114,  # Missing module docstring
+    C0115,  # Missing class docstring
+    C0116,  # Missing function docstring
+    R0913,  # Too many arguments
+    R0914,  # Too many local variables
+    R0915,  # Too many statements
+    R0902,  # Too many instance attributes
+    R0903,  # Too few public methods
+    W0212,  # Access to protected member (common in ROS2)
+    C0301,  # Line too long (handled by flake8)
+    C0330,  # Wrong hanging indentation
+
+[FORMAT]
+# Maximum line length
+max-line-length=100
+
+# Expected format of line ending
+expected-line-ending-format=LF
+
+[BASIC]
+# Good variable names which should always be accepted
+good-names=i,j,k,x,y,z,w,ex,_,e,t,dt,dx,dy,dz,tf,id
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=10
+
+# Maximum number of attributes for a class
+max-attributes=15
+
+# Maximum number of local variables for function / method body
+max-locals=20
+
+[IMPORTS]
+# Allow wildcard imports for commonly used modules
+allow-wildcard-with-all=yes

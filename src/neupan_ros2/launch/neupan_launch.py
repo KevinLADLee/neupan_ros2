@@ -12,7 +12,6 @@ def generate_launch_description():
         'neupan_params.yaml'
     )
 
-
     return LaunchDescription([
         Node(
             package='neupan_ros2',
@@ -23,4 +22,3 @@ def generate_launch_description():
             parameters=[config],
         )
     ])
-
