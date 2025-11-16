@@ -1,6 +1,6 @@
-"""
-NeuPAN Simulator Integration Launch File
-Launch complete simulation system: ddr_minimal_sim simulator + NeuPAN planner
+"""NeuPAN Simulator Integration Launch File.
+
+Launch complete simulation system: ddr_minimal_sim simulator + NeuPAN planner.
 
 Usage:
   ros2 launch neupan_ros2 sim_diff_launch.py sim_env_config:=sim_env_obs.yaml

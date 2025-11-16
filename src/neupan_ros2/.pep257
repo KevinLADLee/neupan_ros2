@@ -1,0 +1,22 @@
+[pep257]
+# Ignore docstring format rules that conflict with Google/NumPy style
+# D100/D103/D104/D107: Missing docstrings (not required for all modules)
+# D213/D203/D212: Multi-line docstring format (conflicts with Google style)
+# D406/D407/D413: Section formatting (Google style doesn't use underlines)
+# D401: Imperative mood (sometimes descriptive is clearer)
+ignore =
+    D100,  # Missing docstring in public module
+    D103,  # Missing docstring in public function
+    D104,  # Missing docstring in public package
+    D107,  # Missing docstring in __init__
+    D212,  # Multi-line docstring summary should start at the first line
+    D213,  # Multi-line docstring summary should start at the second line (conflicts with D212)
+    D203,  # 1 blank line required before class docstring (conflicts with D211)
+    D406,  # Section name should end with a newline
+    D407,  # Missing dashed underline after section
+    D413,  # Missing blank line after last section
+    D401   # Imperative mood (sometimes descriptive is clearer)
+
+# Match files
+match = .*\.py
+match-dir = [^\.].*

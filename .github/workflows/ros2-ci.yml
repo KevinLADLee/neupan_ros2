@@ -1,0 +1,377 @@
+name: ROS2 CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  # Code style check - warnings only, won't fail the workflow
+  lint:
+    name: Code Style Check
+    runs-on: ubuntu-22.04
+    continue-on-error: true  # Don't fail workflow on style issues
+    env:
+      ROS_DISTRO: humble
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: ${{ runner.os }}-apt-lint-${{ hashFiles('.github/workflows/ros2-ci.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-lint-
+            ${{ runner.os }}-apt-
+
+      - name: Setup ROS 2 Humble
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: humble
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip python3-numpy git
+          sudo apt-get install -y python3-ament-flake8 python3-ament-pep257
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-lint-${{ hashFiles('src/neupan_ros2/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-lint-
+            ${{ runner.os }}-pip-
+
+      - name: Install additional Python packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+
+      - name: Run flake8
+        id: flake8
+        continue-on-error: true
+        run: |
+          cd src/neupan_ros2
+          mkdir -p /tmp/lint-reports
+
+          echo "=== Running flake8 code style check ==="
+
+          # Run pytest and capture output
+          set +e  # Don't exit on error
+          python -m pytest test/test_flake8.py -v 2>&1 | tee /tmp/lint-reports/flake8.log
+          FLAKE8_EXIT=$?
+          set -e
+
+          # Parse output and create GitHub annotations
+          if [ $FLAKE8_EXIT -ne 0 ]; then
+            echo ""
+            echo "=== Flake8 Violations Summary ==="
+
+            # Extract violation count
+            VIOLATION_COUNT=$(grep -o 'Found [0-9]* code style errors' /tmp/lint-reports/flake8.log | grep -o '[0-9]*' || echo "0")
+
+            if [ "$VIOLATION_COUNT" -gt 0 ]; then
+              echo "::warning::Found $VIOLATION_COUNT flake8 violation(s)"
+
+              # Parse violations and create annotations
+              # Format: path:line:column: error_code message
+              grep -E '^\./.*:[0-9]+:[0-9]+:' /tmp/lint-reports/flake8.log | while IFS= read -r line; do
+                FILE=$(echo "$line" | cut -d':' -f1 | sed 's|^\./||')
+                LINE_NUM=$(echo "$line" | cut -d':' -f2)
+                MESSAGE=$(echo "$line" | cut -d':' -f4- | sed 's/^[[:space:]]*//')
+
+                echo "::warning file=src/neupan_ros2/$FILE,line=$LINE_NUM::flake8: $MESSAGE"
+              done || true
+
+              # Display summary
+              echo ""
+              echo "Violations by type:"
+              grep -oE '[EWF][0-9]{3}' /tmp/lint-reports/flake8.log | sort | uniq -c | sort -rn || echo "  (Unable to parse violation types)"
+            fi
+          else
+            echo "::notice::✓ No flake8 violations found"
+          fi
+
+          exit 0  # Don't fail the job
+
+      - name: Run pep257
+        id: pep257
+        continue-on-error: true
+        run: |
+          cd src/neupan_ros2
+
+          echo "=== Running pep257 docstring check ==="
+
+          # Run pytest and capture output
+          set +e  # Don't exit on error
+          python -m pytest test/test_pep257.py -v 2>&1 | tee /tmp/lint-reports/pep257.log
+          PEP257_EXIT=$?
+          set -e
+
+          # Parse output and create GitHub annotations
+          if [ $PEP257_EXIT -ne 0 ]; then
+            echo ""
+            echo "=== PEP257 Violations Summary ==="
+
+            # Extract violations from output
+            VIOLATION_COUNT=$(grep -c '^[[:space:]]*.*:[0-9]*:' /tmp/lint-reports/pep257.log || echo "0")
+
+            if [ "$VIOLATION_COUNT" -gt 0 ]; then
+              echo "::warning::Found $VIOLATION_COUNT pep257 violation(s)"
+
+              # Parse violations and create annotations
+              # Format: path:line: message
+              grep -E '^[[:space:]]*.*:[0-9]+:' /tmp/lint-reports/pep257.log | while IFS= read -r line; do
+                # Remove leading whitespace
+                line=$(echo "$line" | sed 's/^[[:space:]]*//')
+                FILE=$(echo "$line" | cut -d':' -f1)
+                LINE_NUM=$(echo "$line" | cut -d':' -f2)
+                MESSAGE=$(echo "$line" | cut -d':' -f3- | sed 's/^[[:space:]]*//')
+
+                # Only process if file path doesn't start with "Found"
+                if [[ ! "$FILE" =~ ^Found ]]; then
+                  echo "::warning file=src/neupan_ros2/$FILE,line=$LINE_NUM::pep257: $MESSAGE"
+                fi
+              done || true
+
+              # Display summary
+              echo ""
+              echo "Check the uploaded artifacts for full details"
+            fi
+          else
+            echo "::notice::✓ No pep257 violations found"
+          fi
+
+          exit 0  # Don't fail the job
+
+      - name: Lint summary
+        if: always()
+        run: |
+          echo "### 📋 Code Style Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Flake8 status
+          if grep -q "::notice::✓ No flake8 violations" /tmp/lint-reports/flake8.log 2>/dev/null; then
+            echo "✅ **Flake8**: All checks passed" >> $GITHUB_STEP_SUMMARY
+          elif [ -f /tmp/lint-reports/flake8.log ]; then
+            FLAKE8_COUNT=$(grep -o 'Found [0-9]* code style errors' /tmp/lint-reports/flake8.log | grep -o '[0-9]*' || echo "unknown")
+            echo "⚠️ **Flake8**: $FLAKE8_COUNT violation(s) found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Flake8**: Check failed to run" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # PEP257 status
+          if grep -q "::notice::✓ No pep257 violations" /tmp/lint-reports/pep257.log 2>/dev/null; then
+            echo "✅ **PEP257**: All checks passed" >> $GITHUB_STEP_SUMMARY
+          elif [ -f /tmp/lint-reports/pep257.log ]; then
+            PEP257_COUNT=$(grep -c '^[[:space:]]*.*:[0-9]*:' /tmp/lint-reports/pep257.log || echo "unknown")
+            echo "⚠️ **PEP257**: $PEP257_COUNT violation(s) found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **PEP257**: Check failed to run" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> 💡 **Note**: Lint warnings won't fail the build, but fixing them improves code quality." >> $GITHUB_STEP_SUMMARY
+          echo "> 📎 Download the lint-reports artifact for detailed information." >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports
+          path: /tmp/lint-reports/
+          retention-days: 7
+
+  # ROS2 build and test - will fail on errors
+  build-and-test:
+    name: ROS2 Build and Test
+    runs-on: ubuntu-latest
+    container: ros:humble-ros-base-jammy
+    env:
+      ROS_DISTRO: humble
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ========================================================================
+      # System Setup
+      # ========================================================================
+
+      - name: Install Node.js for GitHub Actions cache
+        run: |
+          apt-get update -qq
+          curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+          apt-get install -y nodejs
+
+      - name: Cache system dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+            /usr/local/lib/python3.10/dist-packages
+          key: ${{ runner.os }}-sys-deps-v3-${{ hashFiles('src/**/package.xml') }}
+
+      - name: Install system dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y python3-pip python3-numpy python3-tk git curl build-essential cmake
+          # Remove conflicting packages that will be installed via pip
+          apt-get remove -y python3-sympy || true
+
+      # ========================================================================
+      # Python Dependencies
+      # ========================================================================
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-v2-${{ hashFiles('src/neupan_ros2/setup.py', 'src/neupan_ros2/package.xml') }}
+
+      # ========================================================================
+      # NeuPAN Dependency (Cached for Speed)
+      # ========================================================================
+
+      - name: Cache NeuPAN installation
+        id: cache-neupan
+        uses: actions/cache@v4
+        with:
+          path: /tmp/NeuPAN
+          # Cache invalidates only if workflow changes (NeuPAN version stable)
+          key: ${{ runner.os }}-neupan-v3-${{ hashFiles('.github/workflows/ros2-ci.yml') }}
+
+      - name: Install NeuPAN dependencies
+        if: steps.cache-neupan.outputs.cache-hit != 'true'
+        env:
+          PIP_BREAK_SYSTEM_PACKAGES: 1
+        run: |
+          echo "Installing NeuPAN from GitHub..."
+          cd /tmp
+          git clone https://github.com/hanruihua/NeuPAN.git
+          cd NeuPAN
+          python3 -m pip install --upgrade pip
+          python3 -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python3 -m pip install -e .
+
+      - name: Restore NeuPAN from cache
+        if: steps.cache-neupan.outputs.cache-hit == 'true'
+        env:
+          PIP_BREAK_SYSTEM_PACKAGES: 1
+        run: |
+          echo "Restoring NeuPAN from cache..."
+          cd /tmp/NeuPAN
+          python3 -m pip install --no-deps -e .
+
+      # ========================================================================
+      # Workspace Validation & Build
+      # ========================================================================
+
+      - name: Verify workspace structure
+        run: |
+          cd $GITHUB_WORKSPACE
+          echo "=== Workspace Structure ==="
+          ls -la
+          echo ""
+          echo "=== Discovering ROS2 packages ==="
+          # Source ROS2 and discover packages
+          . /opt/ros/$ROS_DISTRO/setup.sh
+
+          # Get full package list for debugging
+          echo "Packages found:"
+          colcon list
+          echo ""
+
+          # Check for duplicate package names
+          DUPLICATES=$(colcon list --names-only | sort | uniq -d)
+
+          if [ -n "$DUPLICATES" ]; then
+            echo "::error::Duplicate package names detected!"
+            echo "::error::The following packages appear multiple times:"
+            echo "$DUPLICATES"
+            echo ""
+            echo "Full package details:"
+            colcon list
+            echo ""
+            echo "::error::This usually means packages exist in multiple locations."
+            echo "::error::Check for nested workspaces or incorrectly placed package.xml files."
+            exit 1
+          fi
+
+          # Count and report packages
+          PACKAGE_COUNT=$(colcon list --names-only | wc -l)
+          echo "::notice::Workspace validation passed: $PACKAGE_COUNT unique package(s) discovered"
+
+      - name: Run setup.sh
+        run: |
+          cd $GITHUB_WORKSPACE
+          echo "=== Running setup.sh ==="
+          bash setup.sh
+          if [ $? -ne 0 ]; then
+            echo "::error::setup.sh failed"
+            exit 1
+          fi
+
+      - name: Clean previous build artifacts
+        run: |
+          cd $GITHUB_WORKSPACE
+          echo "=== Cleaning build artifacts ==="
+          # Remove build artifacts to ensure clean build
+          # This prevents CMake cache issues, especially when testing with 'act --bind'
+          rm -rf build/ install/ log/
+          echo "::notice::Build directories cleaned"
+
+      - name: Build ROS2 workspace
+        run: |
+          cd $GITHUB_WORKSPACE
+          . /opt/ros/$ROS_DISTRO/setup.sh
+
+          echo "=== Building workspace with colcon ==="
+          colcon build \
+            --symlink-install \
+            --event-handlers console_direct+ \
+            --cmake-args -DCMAKE_BUILD_TYPE=Release \
+            --parallel-workers $(nproc)
+
+          if [ $? -ne 0 ]; then
+            echo "::error::Colcon build failed"
+            echo "::notice::Check build logs for details"
+            exit 1
+          fi
+
+          echo "::notice::Build completed successfully"
+
+      # ========================================================================
+      # Artifact Upload (Only on Failure for Debugging)
+      # ========================================================================
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ github.run_id }}
+          path: log/
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: |
+            build/*/test_results/
+            build/*/pytest.xml
+          retention-days: 7
+          if-no-files-found: warn

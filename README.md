@@ -31,6 +31,9 @@
 - 🔄 **Sim-to-Real**: Seamless transition between simulation and physical robots (e.g., Limo)
 - 🛠️ **Easy Testing**: Pre-configured scenarios for algorithm validation
 - 📦 **Modular Design**: Independent packages for flexibility
+- 🔒 **Thread-Safe**: Multi-threaded architecture with state protection for robust performance
+- 🎨 **Optional Visualization**: Configurable RViz markers for performance tuning on embedded platforms
+- ⚙️ **CI/CD Ready**: Automated testing and build verification with Docker-based workflows
 
 ### Demo
 
@@ -168,6 +171,20 @@ colcon build --packages-select ddr_minimal_sim
 
 - **Simulator scenarios**: See [ddr_minimal_sim development guide](src/ddr_minimal_sim/README.md#development) for custom scenarios
 - **NeuPAN parameters**: Modify `src/neupan_ros2/config/neupan_config/neupan_sim_diff.yaml`
+
+### Continuous Integration
+
+[![ROS2 CI](https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml/badge.svg)](https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml)
+
+Automated testing on every push and pull request:
+
+- **Build Verification**: Compiles workspace on Ubuntu 22.04 + ROS2 Humble
+- **Code Quality**: flake8 and pep257 linting with GitHub annotations
+- **Docker-based**: Reproducible builds using official ROS2 containers
+- **Optimized Caching**: Fast CI runs (~30sec with cache hits)
+- **Workspace Validation**: Detects duplicate packages and workspace issues
+
+See [CI/CD Documentation](.github/CI_README.md) for detailed workflow information.
 
 ### Citation
 

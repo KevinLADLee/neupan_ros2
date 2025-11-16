@@ -14,8 +14,12 @@ neupan_node:
     lidar_frame: 'base_link'   # LiDAR frame (matches ddr_minimal_sim)
 
     # ========== Visualization Configuration ==========
-    marker_size: 0.05          # DUNE/NRMP point marker size
-    marker_z: 0.3              # Robot marker height (adapted for small robot)
+    enable_visualization: false   # Master switch for all visualization
+    enable_dune_markers: true    # Enable DUNE point cloud markers
+    enable_nrmp_markers: true    # Enable NRMP point cloud markers
+    enable_robot_marker: true    # Enable robot footprint marker
+    marker_size: 0.05            # DUNE/NRMP point marker size
+    marker_z: 0.3                # Robot marker height (adapted for small robot)
 
     # ========== Laser Scan Processing Configuration ==========
     scan_angle_max: 3.14       # Maximum scan angle (180 degrees)
@@ -28,6 +32,7 @@ neupan_node:
     flip_angle: false                       # Whether to flip scan angles
     refresh_initial_path: true              # Refresh path when receiving new path
     include_initial_path_direction: false   # Use point gradient to calculate direction
+    control_frequency: 50.0                 # Control loop frequency (Hz)
 
     # ========== Topic Configuration (Optional) ==========
     # Uncomment and modify to customize topic names for integration

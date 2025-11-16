@@ -5,8 +5,16 @@ neupan_node:
     map_frame: 'map'
     base_frame: 'livox_frame'
     lidar_frame: 'livox_frame'
+
+    # Visualization control
+    enable_visualization: true   # Master switch for all visualization
+    enable_dune_markers: true    # Enable DUNE point cloud markers
+    enable_nrmp_markers: true    # Enable NRMP point cloud markers
+    enable_robot_marker: true    # Enable robot footprint marker
     marker_size: 0.05
     marker_z: 1.0
+
+    # Scan processing
     scan_angle_max: 3.14
     scan_angle_min: -3.14
     scan_downsample: 1
@@ -15,6 +23,7 @@ neupan_node:
     flip_angle: false
     refresh_initial_path: true
     include_initial_path_direction: false
+    control_frequency: 50.0  # Control loop frequency (Hz)
 
     # ========== Topic Configuration (Optional) ==========
     # Uncomment and modify to customize topic names for your robot

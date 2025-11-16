@@ -1,0 +1,29 @@
+[flake8]
+# Maximum line length (ROS2 ament_flake8 uses 99)
+max-line-length = 99
+
+# Exclude common directories
+exclude =
+    .git,
+    __pycache__,
+    build,
+    install,
+    log,
+    .vscode,
+    *.egg-info
+
+# Ignore specific error codes
+ignore =
+    # W503: line break before binary operator (conflicts with PEP 8)
+    W503,
+    # E203: whitespace before ':' (conflicts with black formatter)
+    E203
+
+# Show source code for each error
+show-source = True
+
+# Count the number of occurrences of each error/warning code
+count = True
+
+# Print total number of errors
+statistics = True
