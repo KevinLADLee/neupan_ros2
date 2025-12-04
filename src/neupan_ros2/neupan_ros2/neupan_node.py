@@ -615,6 +615,15 @@ class NeupanCore(Node):
             f"theta: {theta:.2f}rad"
         )
 
+        # Check if robot state is ready
+        if self.robot_state is None:
+            self.get_logger().warn(
+                "Goal received but robot state not yet available. "
+                "Path planning will start once robot state is received."
+            )
+            self.goal = new_goal
+            return
+
         # Lock only when accessing shared state and modifying planner
         with self._state_lock:
             self.goal = new_goal
@@ -653,9 +662,11 @@ class NeupanCore(Node):
             point_arr = np.array(point)
             if point_arr.ndim == 1:
                 point_arr = point_arr.reshape(-1, 1)
+            # Extract only first 3 elements (x, y, theta) to ensure consistent dimensions
+            point_arr = point_arr[:3, :]
             normalized_points.append(point_arr)
 
-        # Stack all points horizontally -> shape: (>=3, n_poses)
+        # Stack all points horizontally -> shape: (3, n_poses)
         points_matrix = np.hstack(normalized_points)
 
         # Vectorized extraction (single op instead of 3 list comps)
