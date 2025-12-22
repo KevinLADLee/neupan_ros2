@@ -1,0 +1,52 @@
+# NeuPAN Real Robot Configuration
+# Configuration for Ranger Mini robot integration
+
+neupan_node:
+  ros__parameters:
+    # Robot identification
+    robot_type: 'ranger'
+    robot_description: 'Ranger Mini ackermann drive robot'
+
+    # Configuration file paths (relative to robot directory)
+    planner_config_file: 'planner.yaml'
+    dune_checkpoint_file: 'models/dune_model_5000.pth'
+
+    # TF Frame configuration
+    map_frame: 'map'           # Global map coordinate frame
+    base_frame: 'base_link'    # Robot base frame
+    lidar_frame: 'base_laser'  # LiDAR frame
+
+    # ========== Visualization Configuration ==========
+    enable_visualization: true   # Master switch for all visualization
+    enable_dune_markers: true    # Enable DUNE point cloud markers
+    enable_nrmp_markers: true    # Enable NRMP point cloud markers
+    enable_robot_marker: true    # Enable robot footprint marker
+    marker_size: 0.05            # DUNE/NRMP point marker size
+    marker_z: 1.0                # Robot marker height
+
+    # ========== Laser Scan Processing Configuration ==========
+    scan_angle_max: 3.14       # Maximum scan angle (180 degrees)
+    scan_angle_min: -3.14      # Minimum scan angle (-180 degrees)
+    scan_downsample: 1         # Scan downsampling rate (1=use all points)
+    scan_range_max: 5.0        # Maximum scan distance (meters)
+    scan_range_min: 0.01       # Minimum scan distance (meters)
+
+    # ========== Path Planning Configuration ==========
+    flip_angle: false                       # Whether to flip scan angles
+    refresh_initial_path: true              # Refresh path when receiving new path
+    include_initial_path_direction: false   # Use point gradient to calculate direction
+    control_frequency: 50.0                 # Control loop frequency (Hz)
+
+    # ========== Topic Configuration (Optional) ==========
+    # Uncomment and modify to customize topic names for integration
+    # cmd_vel_topic: '/neupan_cmd_vel'        # Velocity command output
+    # scan_topic: '/scan'                     # Laser scan input
+    # plan_input_topic: '/plan'               # Global path input
+    # goal_topic: '/goal_pose'                # Goal pose input
+    # plan_output_topic: '/neupan_plan'       # Optimized trajectory output
+    # ref_state_topic: '/neupan_ref_state'    # Reference state output
+    # initial_path_topic: '/neupan_initial_path'  # Initial path visualization
+    # dune_markers_topic: '/dune_point_markers'   # DUNE visualization
+    # robot_marker_topic: '/robot_marker'         # Robot footprint marker
+    # nrmp_markers_topic: '/nrmp_point_markers'   # NRMP visualization
+
