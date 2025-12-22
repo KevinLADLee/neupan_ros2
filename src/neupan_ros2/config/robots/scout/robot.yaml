@@ -1,0 +1,40 @@
+neupan_node:
+  ros__parameters:
+    # Robot identification
+    robot_type: 'scout'
+    robot_description: 'Scout differential drive robot with Livox lidar'
+
+    # Configuration file paths (relative to robot directory)
+    planner_config_file: 'planner.yaml'
+    dune_checkpoint_file: 'models/dune_model_5000.pth'
+
+    # TF Frame configuration (Scout-specific)
+    map_frame: 'map'
+    base_frame: 'base_link'
+    lidar_frame: 'livox_frame'
+
+    # Visualization control
+    enable_visualization: true   # Master switch for all visualization
+    enable_dune_markers: true    # Enable DUNE point cloud markers
+    enable_nrmp_markers: true    # Enable NRMP point cloud markers
+    enable_robot_marker: true    # Enable robot footprint marker
+    marker_size: 0.05
+    marker_z: 1.0
+
+    # Scan processing (Scout-specific settings)
+    scan_angle_max: 3.14
+    scan_angle_min: -3.14
+    scan_downsample: 1
+    scan_range_max: 5.0
+    scan_range_min: 0.01
+    flip_angle: false
+    refresh_initial_path: true
+    include_initial_path_direction: false
+    control_frequency: 50.0  # Control loop frequency (Hz)
+
+    # ========== Topic Configuration (Optional) ==========
+    # Uncomment and modify to customize topic names for your robot
+    # cmd_vel_topic: '/neupan_cmd_vel'
+    # scan_topic: '/scan'
+    # plan_input_topic: '/plan'
+    # goal_topic: '/goal_pose'

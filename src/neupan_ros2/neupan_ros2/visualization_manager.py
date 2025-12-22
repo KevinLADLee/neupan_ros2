@@ -263,7 +263,7 @@ class VisualizationManager:
         marker.header.frame_id = self.map_frame
         marker.header.stamp = self.node.get_clock().now().to_msg()
 
-        marker.color.a = 1.0
+        marker.color.a = 0.5
         # Green color for robot
         marker.color.r = 0 / 255
         marker.color.g = 255 / 255
