@@ -1,10 +1,17 @@
-"""NeuPAN Simulator Integration Launch File.
+"""NeuPAN Complete Simulation System Launch File.
 
-Launch complete simulation system: ddr_minimal_sim simulator + NeuPAN planner.
+Launches the complete simulation environment including:
+  - ddr_minimal_sim simulator (robot dynamics, environment, laser simulation)
+  - NeuPAN planner node
+  - RViz2 visualization (optional)
+
+This integrates the external simulator with NeuPAN. For standalone NeuPAN testing
+without the full simulator, use: ros2 launch neupan_ros2 simulation.launch.py
 
 Usage:
-  ros2 launch neupan_ros2 sim_diff_launch.py sim_env_config:=sim_env_obs.yaml
-  ros2 launch neupan_ros2 sim_diff_launch.py sim_env_config:=sim_env_obs_exam.yaml use_rviz:=true
+  ros2 launch neupan_ros2 sim_complete.launch.py
+  ros2 launch neupan_ros2 sim_complete.launch.py sim_env_config:=scenario_maze.yaml
+  ros2 launch neupan_ros2 sim_complete.launch.py sim_env_config:=scenario_obstacles.yaml use_rviz:=true
 """
 import os
 from ament_index_python.packages import get_package_share_directory
@@ -17,7 +24,7 @@ from launch.logging import get_logger
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
-logger = get_logger('sim_diff_launch')
+logger = get_logger('sim_complete_launch')
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -37,21 +44,15 @@ def generate_launch_description() -> LaunchDescription:
 
     # ========== Configuration Files ==========
 
-    # NeuPAN simulation configuration
-    neupan_config = os.path.join(
-        get_package_share_directory('neupan_ros2'),
-        'config',
-        'sim_diff.yaml'
-    )
+    # Use new robot-based configuration structure
+    pkg_share = get_package_share_directory('neupan_ros2')
+    robot_config_dir = os.path.join(pkg_share, 'config', 'robots', 'simulation')
+    robot_config = os.path.join(robot_config_dir, 'robot.yaml')
 
     # RViz configuration
-    rviz_config = os.path.join(
-        get_package_share_directory('neupan_ros2'),
-        'rviz',
-        'neupan_sim.rviz'
-    )
+    rviz_config = os.path.join(pkg_share, 'rviz', 'neupan_sim.rviz')
 
-    logger.info(f"Using NeuPAN config: {neupan_config}")
+    logger.info(f"Using NeuPAN config from: {robot_config_dir}")
     logger.info("Sim environment config will be passed to ddr_minimal_sim")
 
     # ========== Include ddr_minimal_sim complete launcher ==========
@@ -69,7 +70,7 @@ def generate_launch_description() -> LaunchDescription:
         }.items()
     )
 
-    # ========== NeuPAN规划器节点 ==========
+    # ========== NeuPAN Planner Node ==========
 
     neupan_node = Node(
         package='neupan_ros2',
@@ -77,9 +78,12 @@ def generate_launch_description() -> LaunchDescription:
         name='neupan_node',
         output='screen',
         emulate_tty=True,
-        parameters=[neupan_config, {'use_sim_time': True}],
+        parameters=[
+            robot_config,
+            {'robot_config_dir': robot_config_dir}
+        ],
         remappings=[
-            ('/neupan_cmd_vel', '/cmd_vel')  # neupan输出连接到仿真器输入
+            ('/neupan_cmd_vel', '/cmd_vel')  # NeuPAN output to simulator input
         ]
     )
 
@@ -120,3 +124,4 @@ def generate_launch_description() -> LaunchDescription:
         # Visualization
         rviz_node,
     ])
+

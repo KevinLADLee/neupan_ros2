@@ -1,7 +1,14 @@
 neupan_node:
   ros__parameters:
-    neupan_config_file: 'neupan_limo_diff.yaml'
-    dune_checkpoint_file: 'model_5000.pth'
+    # Robot identification
+    robot_type: 'limo'
+    robot_description: 'LIMO differential drive robot'
+
+    # Configuration file paths (relative to robot directory)
+    planner_config_file: 'planner.yaml'
+    dune_checkpoint_file: 'models/dune_model_5000.pth'
+
+    # TF Frame configuration
     map_frame: 'map'
     base_frame: 'livox_frame'
     lidar_frame: 'livox_frame'

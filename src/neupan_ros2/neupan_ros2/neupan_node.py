@@ -65,7 +65,16 @@ class NeupanCore(Node):
         # Package directory for accessing config files and models
         self.pkg_dir = get_package_share_directory("neupan_ros2")
 
+        # Robot identification and configuration directory
+        self.declare_parameter("robot_type", "")
+        self.declare_parameter("robot_description", "")
+        self.declare_parameter("robot_config_dir", "")  # Set by launch file
+        self.declare_parameter("planner_config_file", "planner.yaml")
+        self.declare_parameter("dune_checkpoint_file", "models/dune_model_5000.pth")
+
+        # Legacy parameter name (for backward compatibility)
         self.declare_parameter("neupan_config_file", "NOT SET")
+
         self.declare_parameter("map_frame", "map")
         self.declare_parameter("base_frame", "base_link")
         self.declare_parameter("lidar_frame", "laser_link")
@@ -76,7 +85,6 @@ class NeupanCore(Node):
         self.declare_parameter("scan_downsample", 1)
         self.declare_parameter("scan_range_min", 0.1)
         self.declare_parameter("scan_range_max", 5.0)
-        self.declare_parameter("dune_checkpoint_file", "NOT SET")
         self.declare_parameter("refresh_initial_path", False)
         self.declare_parameter("flip_angle", False)
         self.declare_parameter("include_initial_path_direction", False)
@@ -100,12 +108,62 @@ class NeupanCore(Node):
         self.declare_parameter("plan_input_topic", "/plan")
         self.declare_parameter("goal_topic", "/goal_pose")
 
-        self.planner_config_file = os.path.join(
-            self.pkg_dir, "config", "neupan_config",
-            self.get_parameter(
-                "neupan_config_file"
-            ).get_parameter_value().string_value
+        # === Configuration Loading ===
+        # Get robot configuration directory (set by launch file)
+        robot_config_dir = (
+            self.get_parameter("robot_config_dir")
+            .get_parameter_value().string_value
         )
+
+        # Validate robot config directory exists
+        if not robot_config_dir or not os.path.isdir(robot_config_dir):
+            raise ValueError(
+                f"Invalid robot_config_dir: '{robot_config_dir}'. "
+                "Must be set by launch file to a valid robot config directory."
+            )
+
+        # Get robot type for logging
+        robot_type = (
+            self.get_parameter("robot_type")
+            .get_parameter_value().string_value
+        )
+        robot_description = (
+            self.get_parameter("robot_description")
+            .get_parameter_value().string_value
+        )
+
+        self.get_logger().info(f"Loading robot configuration: {robot_type}")
+        self.get_logger().info(f"Description: {robot_description}")
+        self.get_logger().info(f"Config directory: {robot_config_dir}")
+
+        # Load planner configuration (relative to robot config dir)
+        planner_config_file = (
+            self.get_parameter("planner_config_file")
+            .get_parameter_value().string_value
+        )
+        self.planner_config_file = os.path.join(robot_config_dir, planner_config_file)
+
+        # Load DUNE checkpoint (relative to robot config dir)
+        dune_checkpoint_file = (
+            self.get_parameter("dune_checkpoint_file")
+            .get_parameter_value().string_value
+        )
+        self.dune_checkpoint = os.path.join(robot_config_dir, dune_checkpoint_file)
+
+        # Validate configuration files exist
+        if not os.path.isfile(self.planner_config_file):
+            raise FileNotFoundError(
+                f"Planner config not found: {self.planner_config_file}"
+            )
+        if not os.path.isfile(self.dune_checkpoint):
+            raise FileNotFoundError(
+                f"DUNE checkpoint not found: {self.dune_checkpoint}"
+            )
+
+        self.get_logger().info(f"Planner config: {self.planner_config_file}")
+        self.get_logger().info(f"DUNE checkpoint: {self.dune_checkpoint}")
+
+        # Load other parameters
         self.map_frame = self.get_parameter("map_frame").get_parameter_value().string_value
         self.base_frame = self.get_parameter("base_frame").get_parameter_value().string_value
         self.lidar_frame = self.get_parameter("lidar_frame").get_parameter_value().string_value
@@ -127,13 +185,6 @@ class NeupanCore(Node):
             .get_parameter_value().integer_value
         )
 
-        dune_checkpoint_file = os.path.join(
-            self.pkg_dir, "config", "dune_checkpoint",
-            self.get_parameter(
-                "dune_checkpoint_file"
-            ).get_parameter_value().string_value
-        )
-        self.dune_checkpoint = dune_checkpoint_file
         self.refresh_initial_path = (
             self.get_parameter("refresh_initial_path")
             .get_parameter_value().bool_value
@@ -174,9 +225,19 @@ class NeupanCore(Node):
             )
 
         pan = {'dune_checkpoint': self.dune_checkpoint}
-        self.get_logger().info(f"Planner config file: {self.planner_config_file}")
-        self.get_logger().info(f"PAN parameters: {pan}")
         self.neupan_planner = neupan.init_from_yaml(self.planner_config_file, pan=pan)
+
+        # Log robot dimensions for verification
+        self.get_logger().info(
+            f"Robot dimensions - Length: {self.neupan_planner.robot.length:.3f}m, "
+            f"Width: {self.neupan_planner.robot.width:.3f}m"
+        )
+        if hasattr(self.neupan_planner.robot, 'wheelbase') and self.neupan_planner.robot.wheelbase is not None:
+            self.get_logger().info(
+                f"Robot wheelbase: {self.neupan_planner.robot.wheelbase:.3f}m"
+            )
+        self.get_logger().info(f"Robot kinematics: {self.neupan_planner.robot.kinematics}")
+        self.get_logger().info("NeuPAN planner initialized successfully")
 
         # Shared state protected by _state_lock (accessed by multiple threads)
         # Write access: scan_callback (obstacle_points), _get_robot_transform (robot_state)

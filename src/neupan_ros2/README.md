@@ -128,74 +128,161 @@ Launch the complete simulation environment with NeuPAN planner:
 # Source your workspace
 source ~/neupan_ws/install/setup.bash
 
-# Launch with default environment
-ros2 launch neupan_ros2 sim_diff_launch.py
+# NEW: Standalone NeuPAN simulation (no simulator)
+ros2 launch neupan_ros2 simulation.launch.py
+
+# Full simulation with ddr_minimal_sim environment
+ros2 launch neupan_ros2 sim_complete.launch.py
 
 # Or specify custom environment configuration
-ros2 launch neupan_ros2 sim_diff_launch.py sim_env_config:=sim_env_obs.yaml use_rviz:=true
+ros2 launch neupan_ros2 sim_complete.launch.py sim_env_config:=scenario_maze.yaml use_rviz:=true
 ```
 
 **Available Environment Configs**:
 - `sim_env_obs.yaml`: Basic obstacle environment
 - `sim_env_obs_exam.yaml`: Complex obstacle course (default)
 
-### 🤖 2. Real Robot Mode (Limo Platform)
+### 🤖 2. Real Robot Mode
 
-For AgileX Limo differential drive robot:
-
-```bash
-# Launch NeuPAN on Limo robot
-ros2 launch neupan_ros2 limo_diff_launch.py
-
-# With custom configuration
-ros2 launch neupan_ros2 limo_diff_launch.py config:=limo_diff.yaml
-```
-
-> **Note**: This package is optimized for [AgileX Limo ROS2](https://www.agilex.ai/education/18) robot. For inquiries about this platform, contact our partner at sales@hive-matrix.com.
-
-### ⚙️ 3. Custom Configuration
+**LIMO Robot** (differential drive):
 
 ```bash
-# Launch with custom parameter file
-ros2 launch neupan_ros2 neupan_launch.py config:=neupan_params.yaml
+# NEW: Simple command for LIMO
+ros2 launch neupan_ros2 limo.launch.py
+
+# With RViz disabled
+ros2 launch neupan_ros2 limo.launch.py use_rviz:=false
 ```
+
+**Ranger Robot** (ackermann drive):
+
+```bash
+# NEW: Includes pointcloud conversion and TF publishers
+ros2 launch neupan_ros2 ranger.launch.py
+
+# With RViz disabled
+ros2 launch neupan_ros2 ranger.launch.py use_rviz:=false
+```
+
+> **Note**: This package is optimized for [AgileX Limo ROS2](https://www.agilex.ai/education/18) robot and Ranger Mini. For inquiries, contact our partner at sales@hive-matrix.com.
 
 ---
 
 ## 🎯 Configuration
 
-### Configuration Files
+### **NEW** Robot-Based Configuration Structure
 
-Configuration files are located in:
+**Version 0.4.0** introduces a cleaner, robot-centric configuration system. Each robot has its own dedicated directory containing all necessary configuration files and models.
+
+#### Directory Structure
+
 ```
-config/
-├── limo_diff.yaml              # Limo robot configuration
-├── sim_diff.yaml                # Simulation configuration
-└── neupan_config/
-    ├── neupan_sim_diff.yaml     # NeuPAN planner parameters
-    └── dune_checkpoint/
-        └── model_5000.pth       # Pre-trained neural network model
+config/robots/
+├── limo/                          # LIMO robot configuration
+│   ├── robot.yaml                 # ROS node parameters
+│   ├── planner.yaml               # NeuPAN planner parameters
+│   └── models/
+│       └── dune_model_5000.pth    # DUNE neural network model
+│
+├── ranger/                        # Ranger Mini robot configuration
+│   ├── robot.yaml
+│   ├── planner.yaml
+│   └── models/
+│       └── dune_model_5000.pth
+│
+├── simulation/                    # Simulation configuration
+│   ├── robot.yaml
+│   ├── planner.yaml
+│   └── models/
+│       └── dune_model_5000.pth
+│
+├── _template/                     # Template for new robots
+│   ├── README.md                  # How to add new robots
+│   ├── robot.yaml.template
+│   ├── planner.yaml.template
+│   └── models/README.md
+│
+└── README.md                      # Comprehensive documentation
 ```
+
+#### Supported Robots
+
+| Robot | Kinematics | Dimensions (L×W) | Wheelbase | Launch Command |
+|-------|-----------|------------------|-----------|----------------|
+| **LIMO** | Differential | 0.322m × 0.22m | N/A | `ros2 launch neupan_ros2 limo.launch.py` |
+| **Ranger** | Ackermann | 0.720m × 0.500m | 0.500m | `ros2 launch neupan_ros2 ranger.launch.py` |
+| **Simulation** | Differential | 0.322m × 0.22m | N/A | `ros2 launch neupan_ros2 simulation.launch.py` |
+
+### Configuration Files
 
 ### Key Parameters
 
-#### Core Parameters
+Each robot configuration consists of two YAML files:
 
-| Parameter | Description | Default |
+#### 1. `robot.yaml` - ROS Integration Parameters
+
+| Parameter | Description | Example |
 |-----------|-------------|---------|
-| `use_sim_time` | Use simulation time | `true`/`false` |
-| `neupan_config_file` | Planner configuration file | `neupan_sim_diff.yaml` |
-| `dune_checkpoint_file` | Neural network model file | `model_5000.pth` |
-| `map_frame` | Global coordinate frame | `map` |
-| `base_frame` | Robot base coordinate frame | `base_link` |
+| `robot_type` | Robot identifier | `'limo'`, `'ranger'`, `'simulation'` |
+| `robot_description` | Human-readable description | `'LIMO differential drive robot'` |
+| `planner_config_file` | Planner config filename (relative) | `'planner.yaml'` |
+| `dune_checkpoint_file` | DUNE model path (relative) | `'models/dune_model_5000.pth'` |
+| `map_frame` | Global coordinate frame | `'map'` |
+| `base_frame` | Robot base coordinate frame | `'base_link'` |
+| `lidar_frame` | LiDAR coordinate frame | `'base_link'` |
 | `scan_range_max` | Maximum laser scan distance (m) | `5.0` |
 | `scan_range_min` | Minimum laser scan distance (m) | `0.01` |
+| `control_frequency` | Planning loop frequency (Hz) | `50.0` |
+
+#### 2. `planner.yaml` - NeuPAN Planner Parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `receding` | MPC receding horizon | `8` - `10` |
+| `step_time` | MPC time step (s) | `0.2` - `0.25` |
 | `ref_speed` | Reference navigation speed (m/s) | `0.5` |
+| `robot.kinematics` | Robot kinematics type | `'diff'` or `'acker'` |
+| `robot.length` | Robot length (m) | `0.322` (LIMO), `0.720` (Ranger) |
+| `robot.width` | Robot width (m) | `0.22` (LIMO), `0.500` (Ranger) |
+| `robot.wheelbase` | Wheelbase for ackermann (m) | `0.500` (Ranger only) |
+| `robot.max_speed` | Max linear/angular speed | `[0.5, 2.0]` |
+| `ipath.curve_style` | Path generation style | `'line'` (diff), `'dubins'` (acker) |
 | `collision_threshold` | Collision avoidance threshold (m) | `0.01` |
 
-#### Topic Configuration Parameters (NEW)
+### Adding a New Robot
 
-All topic names are now configurable via ROS parameters for flexible integration:
+See [config/robots/README.md](config/robots/README.md) for detailed instructions.
+
+**Quick Steps**:
+
+1. **Copy the template**:
+   ```bash
+   cd config/robots
+   cp -r _template my_robot
+   mv my_robot/robot.yaml.template my_robot/robot.yaml
+   mv my_robot/planner.yaml.template my_robot/planner.yaml
+   ```
+
+2. **Edit configuration files**:
+   - Set `robot_type` and physical dimensions
+   - Choose kinematics type and path style
+   - Add or symlink DUNE model
+
+3. **Create launch file**:
+   ```bash
+   cp launch/limo.launch.py launch/my_robot.launch.py
+   # Edit robot_config_dir path in the file
+   ```
+
+4. **Build and test**:
+   ```bash
+   colcon build --packages-select neupan_ros2
+   ros2 launch neupan_ros2 my_robot.launch.py
+   ```
+
+#### Topic Configuration Parameters
+
+All topic names are configurable via ROS parameters for flexible integration:
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
@@ -245,7 +332,7 @@ enable_robot_marker: true     # Keep robot visualization only
 - **Slow robots** (<0.5 m/s): 20-30 Hz sufficient, saves CPU
 - **Embedded platforms**: Start at 30 Hz, increase if needed
 
-For complete parameter documentation, see [config/sim_diff.yaml](config/sim_diff.yaml).
+For complete parameter documentation, see the robot configuration files in [config/robots/](config/robots/).
 
 ---
 
@@ -286,9 +373,10 @@ map
 
 | Launch File | Purpose | Usage |
 |-------------|---------|-------|
-| `sim_diff_launch.py` | Full simulation system | Simulation testing |
-| `limo_diff_launch.py` | Limo robot deployment | Real robot navigation |
-| `neupan_launch.py` | Standalone planner node | Custom integration |
+| `simulation.launch.py` | Standalone NeuPAN simulation | Testing without external simulator |
+| `sim_complete.launch.py` | Full simulation system with ddr_minimal_sim | Complete simulation testing |
+| `limo.launch.py` | LIMO robot deployment | LIMO differential drive robot |
+| `ranger.launch.py` | Ranger robot deployment | Ranger ackermann robot |
 
 ---
 
