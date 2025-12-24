@@ -1,0 +1,43 @@
+# mpc
+receding: 15
+step_time: 0.2
+ref_speed: 1.0
+device: 'cpu'
+time_print: False
+collision_threshold: 0.01
+
+# robot
+robot:
+  kinematics: 'acker'
+  max_speed: [2.0, 0.656]
+  max_acce: [1.0, 0.328]
+  length: 0.720
+  width: 0.500
+  wheelbase: 0.494
+
+# initial path
+ipath:
+  interval: 0.03
+  # waypoints: [[0, 0, 0], [1, 0, 0]]
+  curve_style: 'dubins'   # 'dubins' or reeds or line
+  min_radius: 0.81
+  loop: False
+  arrive_threshold: 0.5
+  close_threshold: 0.05
+  arrive_index_threshold: 3
+  
+# proximal alternating minimization network
+pan:
+  iter_num: 2
+  dune_max_num: 200
+  nrmp_max_num: 10
+  dune_checkpoint: None
+  iter_threshold: 0.1
+
+# adjust parameters
+adjust:
+  q_s: 0.1
+  p_u: 0.5
+  eta: 15.0
+  d_max: 0.1
+  d_min: 0.01

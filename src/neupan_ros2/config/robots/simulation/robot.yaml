@@ -4,14 +4,19 @@
 neupan_node:
   ros__parameters:
     use_sim_time: true
-    # ========== NeuPAN Configuration Files ==========
-    neupan_config_file: 'neupan_sim_diff.yaml'  # Planner configuration
-    dune_checkpoint_file: 'model_5000.pth'       # Neural network model
 
-    # ========== TF Frame Configuration (Adapted for Simulator) ==========
+    # Robot identification
+    robot_type: 'simulation'
+    robot_description: 'Simulated differential drive robot'
+
+    # Configuration file paths (relative to robot directory)
+    planner_config_file: 'planner.yaml'
+    dune_checkpoint_file: 'models/dune_model_5000.pth'
+
+    # TF Frame configuration
     map_frame: 'map'           # Global map coordinate frame
-    base_frame: 'base_link'    # Robot base frame (matches ddr_minimal_sim)
-    lidar_frame: 'base_link'   # LiDAR frame (matches ddr_minimal_sim)
+    base_frame: 'base_link'    # Robot base frame
+    lidar_frame: 'base_link'   # LiDAR frame
 
     # ========== Visualization Configuration ==========
     enable_visualization: false   # Master switch for all visualization
