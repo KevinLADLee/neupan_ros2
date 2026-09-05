@@ -81,10 +81,10 @@ compensate_obstacle_latency: true
 ## 最小仿真器
 
 `neupan_sim` 同时发布相对话题 `scan` 和 XYZIV（`x/y/z/intensity/vx/vy`）格式的
-`obstacles`。在默认根命名空间中它们分别解析为 `/scan` 与 `/obstacles`。动态圆障碍配置格式为：
+`obstacles`。在默认根命名空间中它们分别解析为 `/scan` 与 `/obstacles`。动态圆障碍配置按
+`[x, y, radius, vx, vy]` 排列，所有值均使用 `map` 坐标系：
 
 ```yaml
-# [x, y, radius, vx, vy]，均在 map 坐标系
 dynamic_circles: [3.2, -1.5, 0.3, 0.0, 0.6]
 ```
 

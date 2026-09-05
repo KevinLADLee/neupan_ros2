@@ -20,54 +20,49 @@
 
 </div>
 
-NeuPAN ROS 2 provides ROS 2 packages for deploying
-[NeuPAN](https://github.com/hanruihua/NeuPAN) as a standalone local-planning
-node. The node subscribes to a reference path and 2D obstacle observations,
-obtains the robot pose from TF, and publishes a `geometry_msgs/msg/Twist`
-velocity command and `nav_msgs/msg/Path` local trajectory for a
-differential-drive robot. It is not a Nav2 controller plugin.
+NeuPAN ROS 2 brings the [NeuPAN](https://github.com/hanruihua/NeuPAN) navigation
+framework to ROS 2 with a native C++ implementation for robot deployment and
+simulation. It supports ROS 2 Humble and Jazzy.
 
-- The ROS 2 nodes and planning library are implemented in C++17; online
-  planning does not require PyTorch, NumPy, or `rclpy`.
-- Tested on ROS 2 Humble/Ubuntu 22.04 and ROS 2 Jazzy/Ubuntu 24.04.
-- CPU-oriented and reproducible: OSQP, osqp-eigen, and QDLDL are bundled.
+Maintained by [Hive Matrix Limited](mailto:sales@hive-matrix.com).
 
-This project is actively developed and maintained by
-[Hive Matrix Limited](mailto:sales@hive-matrix.com), a startup founded by
-KevinLADLee, who is also one of the NeuPAN authors.
+## Acknowledgments
+
+This project builds on [NeuPAN](https://github.com/hanruihua/NeuPAN),
+[NeuPAN-ROS](https://github.com/hanruihua/neupan_ros), and Kaiyuan Zhang's
+[neupan_cpp](https://github.com/zhangkaiyuan007/neupan_cpp). The simulation work
+also references [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt). NeuPAN
+algorithm credit remains with all authors of the original paper.
 
 ## Quick Start
 
-Install ROS 2 Humble or Jazzy, clone the repository, and run:
+Install ROS 2 Humble or Jazzy and clone the repository. Set `ROS_DISTRO` to
+`humble` or `jazzy`, then run:
 
 ```bash
-source /opt/ros/humble/setup.bash  # or /opt/ros/jazzy/setup.bash
-./install_deps.sh                  # explicit apt packages; no rosdep
+ROS_DISTRO=humble
+source /opt/ros/$ROS_DISTRO/setup.bash
+./install_deps.sh
 ./setup.sh
 ./build.sh
 source install/setup.bash
 ros2 launch neupan_sim quick_start.launch.py
 ```
 
-This starts the simulator node, local-planner node, and RViz. Use
-`rviz:=false` for a headless run. See the
-[installation guide](docs/installation.md) for cloning, prerequisites, manual
-dependency installation, build options, and troubleshooting.
+This starts the demonstration and RViz. Use `rviz:=false` for a headless run.
+See the [installation guide](docs/installation.md) for prerequisites and build
+options.
 
 ## ROS 2 packages
 
-| Package | Contents | Package documentation |
+| Package | Purpose | Documentation |
 | --- | --- | --- |
-| `neupan_core` | ROS-independent C++ planning library | [C++ API and planner configuration](src/neupan_core/README.md) |
-| `neupan_ros` | `neupan_node`, `astar_global_node`, and launch/config files | [Nodes, parameters, topics, and TF](src/neupan_ros/README.md) |
-| `neupan_sim` | `neupan_sim_node` and integration-test scenarios | [Node, parameters, topics, and launch files](src/neupan_sim/README.md) |
+| `neupan_core` | NeuPAN planning library | [README](src/neupan_core/README.md) |
+| `neupan_ros` | ROS 2 integration | [README](src/neupan_ros/README.md) |
+| `neupan_sim` | Simulation and verification | [README](src/neupan_sim/README.md) |
 
-`neupan_ros` depends on `neupan_core`; `neupan_sim` provides a closed-loop demo
-and integration-test environment. See [src/README.md](src/README.md) for build
-types and installed targets.
-
-Offline model training is a separate Python project under [`training/`](training/README.md).
-It is not a ROS 2 package and is not built by colcon.
+See [src/README.md](src/README.md) for the workspace structure. Offline model
+training is documented in [`training/README.md`](training/README.md).
 
 ## Documentation
 
@@ -75,10 +70,6 @@ It is not a ROS 2 package and is not built by colcon.
 - [Algorithm equivalence](docs/algorithm_equivalence_CN.md)
 - [ROS 2 topic overview (Chinese)](docs/ros_interfaces_CN.md)
 - [Dynamic-obstacle message contract (Chinese)](docs/dynamic_obstacles_CN.md)
-
-Current scope: differential-drive robots, line-style initial paths, and
-per-point constant-velocity obstacle prediction. Ackermann, omni, and
-Dubins/loop paths are not yet supported by this C++ runtime.
 
 ## Citation
 
@@ -95,16 +86,6 @@ If NeuPAN is useful in your work, please cite the original paper:
   doi={10.1109/TRO.2025.3554252}
 }
 ```
-
-## Acknowledgments
-
-Current development, ROS 2 integration, and robot testing are led by
-[Hive Matrix Limited](mailto:sales@hive-matrix.com). This workspace builds on
-[NeuPAN](https://github.com/hanruihua/NeuPAN),
-[NeuPAN-ROS](https://github.com/hanruihua/neupan_ros), and Kaiyuan Zhang's
-[neupan_cpp](https://github.com/zhangkaiyuan007/neupan_cpp). The simulation work
-also references [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt). NeuPAN
-algorithm credit remains with all authors of the original paper.
 
 ## License
 

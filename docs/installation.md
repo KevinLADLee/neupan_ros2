@@ -16,12 +16,13 @@ not use `rosdep`.
 git clone https://github.com/KevinLADLee/neupan_ros2.git
 cd neupan_ros2
 
-source /opt/ros/humble/setup.bash  # or /opt/ros/jazzy/setup.bash
+ROS_DISTRO=humble
+source /opt/ros/$ROS_DISTRO/setup.bash
 ./install_deps.sh
 ```
 
-`install_deps.sh` uses `$ROS_DISTRO` to install the required Ubuntu and ROS 2
-packages with apt. It accepts only `humble` and `jazzy`.
+Set `ROS_DISTRO` to `humble` or `jazzy`. `install_deps.sh` uses that value to
+install the required Ubuntu and ROS 2 packages with apt.
 
 <details>
 <summary>Manual apt command</summary>

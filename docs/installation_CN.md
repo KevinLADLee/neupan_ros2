@@ -15,12 +15,13 @@ NeuPAN ROS 2 测试以下组合：
 git clone https://github.com/KevinLADLee/neupan_ros2.git
 cd neupan_ros2
 
-source /opt/ros/humble/setup.bash  # 或 /opt/ros/jazzy/setup.bash
+ROS_DISTRO=humble
+source /opt/ros/$ROS_DISTRO/setup.bash
 ./install_deps.sh
 ```
 
-`install_deps.sh` 根据 `$ROS_DISTRO` 使用 apt 安装 Ubuntu 和 ROS 2 依赖，仅接受
-`humble` 或 `jazzy`。
+将 `ROS_DISTRO` 设置为 `humble` 或 `jazzy`。`install_deps.sh` 根据该值使用 apt 安装
+Ubuntu 和 ROS 2 依赖。
 
 <details>
 <summary>手动 apt 安装命令</summary>

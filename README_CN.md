@@ -20,48 +20,47 @@
 
 </div>
 
-NeuPAN ROS 2 提供将 [NeuPAN](https://github.com/hanruihua/NeuPAN) 部署为独立局部规划
-节点的 ROS 2 功能包。节点订阅参考路径和二维障碍物观测，通过 TF 获取机器人位姿，并为
-差速机器人发布 `geometry_msgs/msg/Twist` 速度指令和 `nav_msgs/msg/Path` 局部轨迹。
-该节点不是 Nav2 controller plugin。
+NeuPAN ROS 2 通过原生 C++ 实现，将
+[NeuPAN](https://github.com/hanruihua/NeuPAN) 导航框架带到 ROS 2，面向机器人部署与仿真。
+项目支持 ROS 2 Humble 和 Jazzy。
 
-- ROS 2 节点和规划库使用 C++17 实现；在线规划不依赖 PyTorch、NumPy 或 `rclpy`。
-- 支持 ROS 2 Humble/Ubuntu 22.04 与 ROS 2 Jazzy/Ubuntu 24.04。
-- 面向 CPU 可复现部署：仓库内置 OSQP、osqp-eigen 和 QDLDL。
+由 [Hive Matrix Limited](mailto:sales@hive-matrix.com) 维护。
 
-本项目目前由 [Hive Matrix Limited](mailto:sales@hive-matrix.com) 持续开发和维护。
-Hive Matrix Limited 是 KevinLADLee 创立的初创公司；KevinLADLee 同时也是 NeuPAN 作者之一。
+## 致谢
+
+本项目基于 [NeuPAN](https://github.com/hanruihua/NeuPAN)、
+[NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) 以及 Kaiyuan Zhang 的
+[neupan_cpp](https://github.com/zhangkaiyuan007/neupan_cpp)，仿真工作还参考了
+[DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt)。NeuPAN 算法成果归原论文全体作者所有。
 
 ## Quick Start
 
-安装 ROS 2 Humble 或 Jazzy，克隆仓库后执行：
+安装 ROS 2 Humble 或 Jazzy 并克隆仓库。将 `ROS_DISTRO` 设置为 `humble` 或 `jazzy`，
+然后执行：
 
 ```bash
-source /opt/ros/humble/setup.bash  # 或 /opt/ros/jazzy/setup.bash
-./install_deps.sh                  # 显式安装 apt 依赖，不使用 rosdep
+ROS_DISTRO=humble
+source /opt/ros/$ROS_DISTRO/setup.bash
+./install_deps.sh
 ./setup.sh
 ./build.sh
 source install/setup.bash
 ros2 launch neupan_sim quick_start.launch.py
 ```
 
-该命令会启动仿真节点、局部规划节点和 RViz；无界面运行时添加
-`rviz:=false`。克隆方式、系统要求、手动安装命令、构建选项及排障见
+该命令会启动演示和 RViz；无界面运行时添加 `rviz:=false`。系统要求和构建选项见
 [安装说明](docs/installation_CN.md)。
 
 ## ROS 2 功能包
 
-| 功能包 | 内容 | 功能包文档 |
+| 功能包 | 用途 | 文档 |
 | --- | --- | --- |
-| `neupan_core` | 与 ROS 通信无关的 C++ 规划库 | [C++ API 与规划器配置](src/neupan_core/README.md) |
-| `neupan_ros` | `neupan_node`、`astar_global_node` 及启动/配置文件 | [节点、参数、话题与 TF](src/neupan_ros/README.md) |
-| `neupan_sim` | `neupan_sim_node` 及集成测试场景 | [节点、参数、话题与启动文件](src/neupan_sim/README.md) |
+| `neupan_core` | NeuPAN 规划库 | [README](src/neupan_core/README.md) |
+| `neupan_ros` | ROS 2 集成 | [README](src/neupan_ros/README.md) |
+| `neupan_sim` | 仿真与验证 | [README](src/neupan_sim/README.md) |
 
-`neupan_ros` 依赖 `neupan_core`；`neupan_sim` 提供闭环演示和集成测试环境。各功能包的
-构建类型与安装目标见 [src/README.md](src/README.md)。
-
-离线模型训练位于 [`training/`](training/README.md)，它是独立 Python 项目，不是 ROS 2
-功能包，也不由 colcon 构建。
+工作空间结构见 [src/README.md](src/README.md)，离线模型训练见
+[`training/README.md`](training/README.md)。
 
 ## 文档
 
@@ -69,9 +68,6 @@ ros2 launch neupan_sim quick_start.launch.py
 - [算法等价性说明](docs/algorithm_equivalence_CN.md)
 - [ROS 2 话题概览](docs/ros_interfaces_CN.md)
 - [动态障碍物消息约定](docs/dynamic_obstacles_CN.md)
-
-当前 C++ 运行时支持差速机器人、线式初始路径和逐点常速度障碍预测；暂不支持
-Ackermann、omni 和 Dubins/loop 路径。
 
 ## 引用
 
@@ -88,15 +84,6 @@ Ackermann、omni 和 Dubins/loop 路径。
   doi={10.1109/TRO.2025.3554252}
 }
 ```
-
-## 致谢
-
-当前开发、ROS 2 集成和机器人测试由
-[Hive Matrix Limited](mailto:sales@hive-matrix.com) 主导。本工作空间基于
-[NeuPAN](https://github.com/hanruihua/NeuPAN)、
-[NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) 以及 Kaiyuan Zhang 的
-[neupan_cpp](https://github.com/zhangkaiyuan007/neupan_cpp)，仿真工作还参考了
-[DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt)。NeuPAN 算法成果归原论文全体作者所有。
 
 ## 开源协议
 
