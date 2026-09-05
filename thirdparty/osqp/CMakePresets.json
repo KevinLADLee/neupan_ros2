@@ -1,0 +1,117 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "builtin-double",
+      "displayName": "Builtin double linear algebra (Release)",
+      "description": "Builtin double linear algebra backend",
+      "binaryDir": "${sourceDir}/build.builtin-double",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "OSQP_ALGEBRA_BACKEND": "builtin",
+        "OSQP_USE_FLOAT": "OFF"
+      }
+    },
+    {
+      "name": "builtin-float",
+      "displayName": "Builtin float linear algebra (Release)",
+      "description": "Builtin float linear algebra backend",
+      "binaryDir": "${sourceDir}/build.builtin-float",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "OSQP_ALGEBRA_BACKEND": "builtin",
+        "OSQP_USE_FLOAT": "ON"
+      }
+    },
+    {
+      "name": "mkl",
+      "displayName": "MKL linear algebra (Release)",
+      "description": "MKL linear algebra backend",
+      "binaryDir": "${sourceDir}/build.mkl",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "OSQP_ALGEBRA_BACKEND": "mkl",
+        "OSQP_USE_FLOAT": "ON"
+      }
+    },
+    {
+      "name": "cuda",
+      "displayName": "CUDA linear algebra (Release)",
+      "description": "CUDA linear algebra backend",
+      "binaryDir": "${sourceDir}/build.cuda",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "OSQP_ALGEBRA_BACKEND": "cuda"
+      }
+    },
+    {
+      "name": "builtin-double-debug",
+      "displayName": "Builtin double linear algebra (Debug + ASAN)",
+      "description": "Builtin double linear algebra backend",
+      "binaryDir": "${sourceDir}/build.builtin-double.debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OSQP_ALGEBRA_BACKEND": "builtin",
+        "OSQP_USE_FLOAT": "OFF",
+        "OSQP_BUILD_UNITTESTS": "ON",
+        "OSQP_ASAN": "ON"
+      }
+    },
+    {
+      "name": "builtin-double-packed",
+      "displayName": "Builtin double linear algebra (Debug + ASAN + Packed)",
+      "description": "Builtin double linear algebra backend",
+      "binaryDir": "${sourceDir}/build.builtin-double.packed",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OSQP_ALGEBRA_BACKEND": "builtin",
+        "OSQP_USE_FLOAT": "OFF",
+        "OSQP_BUILD_UNITTESTS": "ON",
+        "OSQP_PACK_SETTINGS": "ON",
+        "OSQP_ASAN": "ON"
+      }
+    },
+    {
+      "name": "builtin-float-debug",
+      "displayName": "Builtin float linear algebra (Debug + ASAN)",
+      "description": "Builtin float linear algebra backend",
+      "binaryDir": "${sourceDir}/build.builtin-float.debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OSQP_ALGEBRA_BACKEND": "builtin",
+        "OSQP_USE_FLOAT": "ON",
+        "OSQP_BUILD_UNITTESTS": "ON",
+        "OSQP_ASAN": "ON"
+      }
+    },
+    {
+      "name": "mkl-debug",
+      "displayName": "MKL linear algebra (Debug + ASAN)",
+      "description": "MKL linear algebra backend",
+      "binaryDir": "${sourceDir}/build.mkl.debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OSQP_ALGEBRA_BACKEND": "mkl",
+        "OSQP_USE_FLOAT": "ON",
+        "OSQP_BUILD_UNITTESTS": "ON",
+        "OSQP_ASAN": "ON"
+      }
+    },
+    {
+      "name": "cuda-debug",
+      "displayName": "CUDA linear algebra (Debug + ASAN)",
+      "description": "CUDA linear algebra backend",
+      "binaryDir": "${sourceDir}/build.debug.cuda",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OSQP_ALGEBRA_BACKEND": "cuda",
+        "OSQP_BUILD_UNITTESTS": "ON"
+      }
+    }
+  ]
+}

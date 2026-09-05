@@ -1,0 +1,82 @@
+neupan_sim:
+  ros__parameters:
+    # A richer continuous-geometry scene for the user-facing RViz demo.
+    scenario_name: "shared warehouse"
+    physics_rate: 100.0
+    sensor_rate: 20.0
+    diagnostics_rate: 10.0
+    integration_substeps: 2
+
+    initial_pose: [0.0, -3.2, 0.0]
+    # The route winds between four shelf islands. It is deliberately supplied
+    # as an initial path: this demo exercises NeuPAN local planning, not a grid
+    # map or a global-planner implementation.
+    path_waypoints: [
+      0.0, -3.2,
+      2.0, -3.2,
+      3.5, -2.2,
+      4.2, -1.2,
+      6.0, -1.2,
+      7.2,  0.0,
+      8.2,  1.2,
+      10.0, 1.2,
+      11.2, 2.7,
+      13.2, 2.7
+    ]
+    path_spacing: 0.1
+
+    world_bounds: [-1.5, 14.5, -5.0, 5.0]
+    robot_size: [0.5, 0.5]
+    speed_limits: [2.0, 1.5]
+    acceleration_limits: [2.0, 2.0]
+    command_timeout: 0.25
+    goal_tolerance: 0.12
+    simulation_timeout: 45.0
+
+    laser_pose: [0.15, 0.0, 0.0]
+    scan_angle_min: -3.141592653589793
+    scan_angle_max: 3.141592653589793
+    scan_angle_increment: 0.017453292519943295
+    scan_range_min: 0.05
+    scan_range_max: 10.0
+
+    # Columns, bollards and parked loads. [x, y, radius, ...]
+    static_circles: [
+      0.0,  2.8, 0.35,
+      3.8,  3.8, 0.30,
+      7.2, -3.7, 0.35,
+      10.8, 4.0, 0.30,
+      13.5, -3.4, 0.40
+    ]
+
+    # Three crossing agents occupy the open gaps between shelf islands.
+    # [x, y, radius, vx, vy, ...]
+    dynamic_circles: [
+      3.7, -4.1, 0.30, 0.0,  0.48,
+      7.3,  3.7, 0.32, 0.0, -0.42,
+      10.7, -3.8, 0.30, 0.0, 0.38
+    ]
+
+    # Four closed shelf islands, expressed as exact continuous line segments.
+    # Each group is: bottom, right, top, left.
+    segments: [
+      0.8, -0.7,  2.9, -0.7,
+      2.9, -0.7,  2.9,  1.6,
+      2.9,  1.6,  0.8,  1.6,
+      0.8,  1.6,  0.8, -0.7,
+
+      4.5,  0.5,  6.5,  0.5,
+      6.5,  0.5,  6.5,  3.7,
+      6.5,  3.7,  4.5,  3.7,
+      4.5,  3.7,  4.5,  0.5,
+
+      8.0, -3.7, 10.0, -3.7,
+      10.0, -3.7, 10.0, -0.5,
+      10.0, -0.5, 8.0, -0.5,
+      8.0, -0.5, 8.0, -3.7,
+
+      11.6, -1.2, 13.5, -1.2,
+      13.5, -1.2, 13.5,  0.6,
+      13.5,  0.6, 11.6,  0.6,
+      11.6,  0.6, 11.6, -1.2
+    ]

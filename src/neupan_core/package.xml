@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>neupan_core</name>
+  <version>0.1.0</version>
+  <description>
+    CPU-oriented C++ NeuPAN planner core (DUNE + NRMP + PAN) with no ROS or
+    Python runtime dependencies.
+  </description>
+  <maintainer email="robert_kaiyuan@utexas.edu">Kaiyuan Zhang</maintainer>
+  <license>GPL-3.0-or-later</license>
+  <url type="repository">https://github.com/hanruihua/NeuPAN</url>
+
+  <buildtool_depend>cmake</buildtool_depend>
+  <depend>eigen</depend>
+  <depend>yaml-cpp</depend>
+
+  <test_depend>gtest</test_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>
