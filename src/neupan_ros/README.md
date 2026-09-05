@@ -1,69 +1,176 @@
 # neupan_ros
 
-Native rclcpp deployment package for `neupan_core`.
+`neupan_ros` is an `ament_cmake` package that exposes `neupan_core` through ROS
+2. It installs the `neupan_node` local planner, a small `astar_global_node` used
+by the example launch file, configuration files, and a composable node.
+It is tested with ROS 2 Humble and Jazzy.
 
-All ROS topic names below are relative. With the default root namespace they
-resolve to the shown absolute names, while namespaces and remappings continue
-to work normally.
+All topic names documented below are relative names and support ROS 2 namespace
+and remapping rules.
 
-Inputs:
+## Quick start
 
-- `/scan` (`sensor_msgs/LaserScan`)
-- `/obstacles` (`sensor_msgs/PointCloud2`): XYZ, XYZI, or XYZIV
-- `/initial_path` (`nav_msgs/Path`)
-- `/neupan_waypoints` (`nav_msgs/Path`)
-- `/neupan_goal` (`geometry_msgs/PoseStamped`)
-- TF `planning_frame <- base_frame` and, when frames differ,
-  `planning_frame <- sensor/reference frame`
+Run the closed-loop example from the repository root:
 
-Outputs:
+```bash
+source /opt/ros/$ROS_DISTRO/setup.bash
+./build.sh
+source install/setup.bash
+ros2 launch neupan_sim quick_start.launch.py
+```
 
-- `/neupan_cmd_vel` (`geometry_msgs/Twist`)
-- `/neupan_plan` (`nav_msgs/Path`)
-- `/neupan_ref_state` (`nav_msgs/Path`)
-- `/neupan_initial_path` (`nav_msgs/Path`)
-- `/neupan_arrive` (`std_msgs/Bool`)
-- `/neupan_diagnostics` (`diagnostic_msgs/DiagnosticArray`)
-- `/dune_point_markers`, `/nrmp_point_markers`
-  (`visualization_msgs/MarkerArray`)
-- `/robot_marker` (`visualization_msgs/Marker`)
+Start the package launch file for robot integration:
 
-`obstacle_source=scan` creates only the LaserScan subscription,
-`obstacle_source=pointcloud` creates only the PointCloud2 subscription, and
-`obstacle_source=auto` creates both for freshness-based selection. The point
-cloud input uses the relative name `obstacles`; connect a different sensor topic
-with a ROS 2 remap instead of a package-specific topic parameter.
+```bash
+ros2 launch neupan_ros neupan.launch.py \
+  planning_frame:=odom base_frame:=base_link
+```
 
-`planning_frame` defaults to continuous `odom`. Sensor messages in that frame
-use a zero-transform fast path; other sensor frames are transformed at
-`header.stamp`. Paths, waypoints and goals may use any non-empty fixed frame;
-their original geometry is retained and reprojected with the latest TF. See the
-[coordinate-frame contract](../../docs/coordinate_frames.md) for the complete
-units, timestamp and per-topic rules.
+`neupan.launch.py` starts both package executables and remaps
+`neupan_cmd_vel` to `cmd_vel`. A deployment must provide the required TF tree,
+obstacle observations, occupancy grid, and goal. If another global planner
+publishes `initial_path`, run `neupan_node` without `astar_global_node`.
 
-The old `map_frame` parameter is intentionally unsupported. Set
-`planning_frame=odom` for a continuous local planning frame, or explicitly use
-`map` in a fixed-world simulation. `config_file` is required; other important
-parameters include `base_frame`, `control_rate`, `obstacle_source`, sensor
-timeouts, scan filters and `compensate_obstacle_latency`.
+## Nodes
 
-Laser filtering, adaptive PointCloud2 decoding, TF transformation, DUNE
-inference and QP assembly all run inside the C++ process. It does not embed
-Python or rclpy. XYZIV is strictly `x/y/z/intensity/vx/vy`; `vx/vy` is the
-planar obstacle velocity in the message frame.
+### `neupan_node`
 
-`laser_scan_preprocessor` and `pointcloud_preprocessor` both produce an
-`ObstacleObservation`. The ROS node then applies one shared SE(2) transform and
-caches the result; the control loop reads the selected cache without copying the
-whole obstacle matrix unless dynamic-obstacle latency compensation is enabled.
+- Executable: `neupan_node`
+- Default node name: `neupan_node`
+- Composable node: `neupan_ros::NeuPANNode`
 
-The planner is registered as the component `neupan_ros::NeuPANNode`. The
-package also installs `neupan_node`, a standalone single-threaded executable
-generated from the same component, so the two deployment modes cannot drift.
+The node obtains the robot pose from TF, converts obstacle and reference-path
+messages into `planning_frame`, calls `neupan_core`, and publishes the local
+velocity command and planner state.
 
-`astar_global_node` is a demo-only A* planner. It adopts the frame from each
-`OccupancyGrid`, transforms `goal_pose` into that frame and publishes
-`initial_path` in the same frame; it has no configured map-frame parameter.
+#### Parameters
 
-See the [Chinese ROS interface reference](../../docs/ros_interfaces_CN.md) for
-the complete topic, QoS and parameter tables.
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| `config_file` | `string` | `""` (required) | Path to the `neupan_core` planner configuration file |
+| `dune_checkpoint` | `string` | `""` | Overrides `pan.dune_checkpoint` from `config_file` |
+| `planning_frame` | `string` | `odom` | Common coordinate frame for planning, paths, and markers |
+| `base_frame` | `string` | `base_link` | Robot body frame used for the TF pose lookup |
+| `control_rate` | `double` | `50.0` | Planning timer frequency in Hz |
+| `include_initial_path_direction` | `bool` | `false` | Use the orientation of each input path pose instead of the XY tangent |
+| `obstacle_source` | `string` | `auto` | `scan`, `pointcloud`, or `auto`; `auto` prefers a fresh point cloud |
+| `scan_timeout` | `double` | `0.5` | Maximum LaserScan age in seconds |
+| `pointcloud_timeout` | `double` | `0.5` | Maximum PointCloud2 age in seconds |
+| `compensate_obstacle_latency` | `bool` | `true` | Propagate dynamic points by velocity times observation age |
+| `scan_angle_min` | `double` | `-3.14` | Minimum accepted LaserScan angle in radians |
+| `scan_angle_max` | `double` | `3.14` | Maximum accepted LaserScan angle in radians |
+| `scan_range_min` | `double` | `0.0` | Minimum accepted LaserScan range in metres |
+| `scan_range_max` | `double` | `5.0` | Maximum accepted LaserScan range in metres |
+| `scan_downsample` | `integer` | `1` | Keep every Nth valid LaserScan beam; must be at least 1 |
+| `flip_angle` | `bool` | `false` | Negate LaserScan beam angles before XY conversion |
+| `solver_fail_grace` | `integer` | `5` | Consecutive unsolved cycles allowed before publishing zero velocity |
+| `stall_speed` | `double` | `0.02` | Command-component threshold used for stall detection |
+| `stall_timeout` | `double` | `3.0` | Zero-command duration before reporting a stall, in seconds |
+| `marker_size` | `double` | `0.05` | DUNE and NRMP marker diameter in metres |
+| `marker_z` | `double` | `1.0` | Marker height above the planning plane in metres |
+
+The keys inside `config_file` configure the C++ planner; they are not ROS 2 node
+parameters. See the [`neupan_core` planner configuration](../neupan_core/README.md#planner-configuration).
+
+#### Subscribed topics
+
+| Name | Message type | QoS | Description |
+| --- | --- | --- | --- |
+| `scan` | `sensor_msgs/msg/LaserScan` | `SensorDataQoS` | Created when `obstacle_source` is `scan` or `auto` |
+| `obstacles` | `sensor_msgs/msg/PointCloud2` | `SensorDataQoS` | Created when `obstacle_source` is `pointcloud` or `auto`; accepts XYZ, XYZI, or XYZIV |
+| `initial_path` | `nav_msgs/msg/Path` | Reliable / Volatile / Keep Last (10) | Dense path containing at least two poses |
+| `neupan_waypoints` | `nav_msgs/msg/Path` | Reliable / Volatile / Keep Last (10) | Sparse waypoints; the current robot pose is prepended |
+| `neupan_goal` | `geometry_msgs/msg/PoseStamped` | Reliable / Volatile / Keep Last (10) | Goal used to generate a straight reference path |
+
+The most recently received reference-path input is active. Its original frame is
+retained and the path is transformed into `planning_frame` at each control
+cycle.
+
+Supported PointCloud2 field layouts are:
+
+| Layout | Required fields | Interpretation |
+| --- | --- | --- |
+| XYZ | `x`, `y`, `z` | Static obstacle points |
+| XYZI | `x`, `y`, `z`, `intensity` | Static points; `intensity` is ignored by the planner |
+| XYZIV | `x`, `y`, `z`, `intensity`, `vx`, `vy` | Dynamic points with planar velocity in the message frame |
+
+Non-finite points are discarded, and `vx` and `vy` must be present together.
+See the [dynamic-obstacle message contract](../../docs/dynamic_obstacles_CN.md).
+
+#### Published topics
+
+All publishers use Reliable / Volatile / Keep Last (10) QoS.
+
+| Name | Message type | Description |
+| --- | --- | --- |
+| `neupan_cmd_vel` | `geometry_msgs/msg/Twist` | Commanded `linear.x` and `angular.z`, published every control cycle |
+| `neupan_plan` | `nav_msgs/msg/Path` | Optimized local trajectory in `planning_frame` |
+| `neupan_ref_state` | `nav_msgs/msg/Path` | Current reference horizon in `planning_frame` |
+| `neupan_initial_path` | `nav_msgs/msg/Path` | Active reference path after transformation and resampling |
+| `neupan_arrive` | `std_msgs/msg/Bool` | Goal-reached state, published every control cycle |
+| `neupan_diagnostics` | `diagnostic_msgs/msg/DiagnosticArray` | Solver, input, safety, and command status |
+| `dune_point_markers` | `visualization_msgs/msg/MarkerArray` | Obstacle points retained by DUNE |
+| `nrmp_point_markers` | `visualization_msgs/msg/MarkerArray` | Points used by the NRMP constraints |
+| `robot_marker` | `visualization_msgs/msg/Marker` | Configured robot footprint |
+
+#### Services and actions
+
+The node defines no application-specific services or actions. The standard ROS
+2 parameter services created by `rclcpp::Node` remain available.
+
+#### TF
+
+The node looks up these transforms:
+
+- latest `planning_frame <- base_frame` for the robot pose
+- timestamped `planning_frame <- sensor_frame` for LaserScan and PointCloud2
+- latest `planning_frame <- reference_frame` for path and goal messages
+
+If a safety-critical input cannot be transformed, the node publishes a zero
+velocity command. The former `map_frame` parameter is not supported; use
+`planning_frame`. See the [coordinate-frame contract](../../docs/coordinate_frames.md).
+
+### `astar_global_node`
+
+- Executable: `astar_global_node`
+- Default node name: `astar_global_node`
+
+This example node creates an initial path from an occupancy grid. It is not a
+Nav2 planner plugin and is not intended to replace a production global planner.
+
+#### Parameters
+
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| `base_frame` | `string` | `base_link` | Frame used to obtain the A* start pose from TF |
+| `robot_radius` | `double` | `0.45` | Occupancy-grid inflation radius in metres |
+| `allow_unknown` | `bool` | `false` | Allow traversal through unknown cells |
+| `simplify_tolerance` | `double` | `0.15` | Douglas-Peucker path simplification tolerance in metres |
+| `goal_tolerance` | `double` | `0.3` | Ignore repeated goals closer than this distance in metres |
+
+#### Subscribed topics
+
+| Name | Message type | QoS | Description |
+| --- | --- | --- | --- |
+| `map` | `nav_msgs/msg/OccupancyGrid` | Reliable / Transient Local / Keep Last (1) | Map and output-path coordinate frame |
+| `goal_pose` | `geometry_msgs/msg/PoseStamped` | Reliable / Volatile / Keep Last (10) | Planning goal; transformed into the map frame |
+
+#### Published topics
+
+| Name | Message type | QoS | Description |
+| --- | --- | --- | --- |
+| `initial_path` | `nav_msgs/msg/Path` | Reliable / Volatile / Keep Last (10) | Simplified A* path in the occupancy-grid frame |
+
+The node defines no application-specific services or actions.
+
+## Launch files
+
+### `neupan.launch.py`
+
+Starts `neupan_node` and `astar_global_node`, loads the packaged planner
+configuration and DUNE model, and remaps `neupan_cmd_vel` to `cmd_vel`.
+
+| Launch argument | Default | Description |
+| --- | --- | --- |
+| `planning_frame` | `odom` | Value passed to `neupan_node.planning_frame` |
+| `base_frame` | `base_link` | Value passed to both nodes' `base_frame` parameter |

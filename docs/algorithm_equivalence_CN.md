@@ -175,7 +175,7 @@ DUNE，却在 NRMP 中留下 `fa=fb=0` 的 `d/e` 子问题。该子问题与 `(s
   NeuPAN 模型。
 - Ackermann、omni 运动学和非 line 曲线尚未移植。
 - loop 路径模式尚未移植。
-- C++ core 的外部路径 API 已保留 gear；但标准 `nav_msgs/Path` 没有 gear 字段，当前
+- C++ 规划库的外部路径 API 已保留 gear；但标准 `nav_msgs/Path` 没有 gear 字段，当前
   ROS 2 适配层仍将该输入解释为全程前进。反向路径需要单独的带 gear 消息接口。
 - 求解失败时 C++ 保留上一次可接受计划；原始 Python 通常让求解异常向上传播。
 - C++ 对成功结果的首控制量再做一次速度边界钳制。正常可行解上它是恒等操作。

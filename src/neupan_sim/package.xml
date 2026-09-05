@@ -3,8 +3,8 @@
 <package format="3">
   <name>neupan_sim</name>
   <version>0.1.0</version>
-  <description>Minimal native C++ closed-loop simulator for NeuPAN verification.</description>
-  <maintainer email="kevinladlee@gmail.com">kevinlad</maintainer>
+  <description>ROS 2 integration-test simulator for the NeuPAN local planner.</description>
+  <maintainer email="sales@hive-matrix.com">KevinLADLee (Hive Matrix Limited)</maintainer>
   <license>GPL-3.0-or-later</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

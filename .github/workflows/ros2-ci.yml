@@ -9,8 +9,17 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    container: ros:humble-ros-base-jammy
+    name: build and test (${{ matrix.ros_distro }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ros_distro: humble
+            container: ros:humble-ros-base-jammy
+          - ros_distro: jazzy
+            container: ros:jazzy-ros-base-noble
+    container: ${{ matrix.container }}
 
     steps:
       - uses: actions/checkout@v4
@@ -24,16 +33,16 @@ jobs:
       - name: Verify package boundary
         shell: bash
         run: |
-          source /opt/ros/humble/setup.bash
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
           test "$(colcon list --names-only | sort | tr '\n' ' ')" = \
             "neupan_core neupan_ros neupan_sim "
 
       - name: Build and test native workspace
         shell: bash
         run: |
-          source /opt/ros/humble/setup.bash
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
           ./build.sh test
-          colcon test --packages-select neupan_core
+          colcon test --event-handlers console_direct+
           colcon test-result --verbose
 
       - name: Validate offline training package

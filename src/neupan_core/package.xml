@@ -3,11 +3,8 @@
 <package format="3">
   <name>neupan_core</name>
   <version>0.1.0</version>
-  <description>
-    CPU-oriented C++ NeuPAN planner core (DUNE + NRMP + PAN) with no ROS or
-    Python runtime dependencies.
-  </description>
-  <maintainer email="robert_kaiyuan@utexas.edu">Kaiyuan Zhang</maintainer>
+  <description>ROS-independent C++ NeuPAN planning library (DUNE, PAN, and NRMP).</description>
+  <maintainer email="sales@hive-matrix.com">KevinLADLee (Hive Matrix Limited)</maintainer>
   <license>GPL-3.0-or-later</license>
   <url type="repository">https://github.com/hanruihua/NeuPAN</url>
 

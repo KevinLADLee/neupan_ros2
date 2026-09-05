@@ -3,10 +3,8 @@
 <package format="3">
   <name>neupan_ros</name>
   <version>0.1.0</version>
-  <description>
-    Native rclcpp deployment node for the CPU-oriented NeuPAN C++ core.
-  </description>
-  <maintainer email="robert_kaiyuan@utexas.edu">Kaiyuan Zhang</maintainer>
+  <description>ROS 2 nodes and component for the NeuPAN C++ local planner.</description>
+  <maintainer email="sales@hive-matrix.com">KevinLADLee (Hive Matrix Limited)</maintainer>
   <license>GPL-3.0-or-later</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

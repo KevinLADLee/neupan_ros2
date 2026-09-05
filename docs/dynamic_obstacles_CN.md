@@ -1,6 +1,6 @@
 # 动态障碍速度接口
 
-## Core 语义
+## `neupan_core` 输入语义
 
 `neupan_core` 接受一一对应的世界坐标点和速度；这里的“世界坐标”是调用方选择的统一
 规划坐标系，在 ROS 适配层中就是可配置的 `planning_frame`：
@@ -20,14 +20,15 @@ p_(t,k) = p_(0,k) + t * step_time * v_k,  t = 0..T.
 `linspace(...).astype(int)` 索引下采样，避免速度错配。空速度矩阵表示所有点静止，因而
 旧的静态点云 API 保持兼容。
 
-## ROS 2 障碍输入
+## PointCloud2 消息约定
 
 `neupan_ros` 同时支持：
 
 - `sensor_msgs/msg/LaserScan`；
 - `sensor_msgs/msg/PointCloud2` 的 XYZ、XYZI、XYZIV 格式。
 
-PointCloud2 订阅相对话题 `obstacles`，部署时使用 ROS 2 remap 连接真实传感器。所有格式都必须
+节点通过相对话题 `obstacles` 订阅 PointCloud2，部署时使用 ROS 2 名称重映射连接实际
+传感器话题。所有格式都必须
 包含标量 FLOAT32 `x/y/z`；规划只使用 `x/y`，但会过滤 `z` 非有限的无效点。`intensity`
 字段可为任意类型且不会参与规划。没有速度字段的 XYZ、XYZI 自动填充零速度。
 
@@ -38,16 +39,16 @@ PointCloud2 订阅相对话题 `obstacles`，部署时使用 ROS 2 remap 连接�
 | `vx` + `vy` | 两个 FLOAT32 | 消息坐标系中的二维速度向量 |
 
 即字段集合为 `x/y/z/intensity/vx/vy`，V 表示平面二维速度，不接受字段别名或标量径向
-速度。若传感器只输出 Doppler 径向速度，应由上游感知/跟踪模块先估计二维速度。ROS
+速度。若传感器只输出 Doppler 径向速度，应由上游感知或跟踪节点先估计二维速度。ROS 2
 适配层对位置应用旋转和平移、对速度只应用旋转，最后转换到 `planning_frame`。若点云
 已经位于 `planning_frame`，则直接使用，不查询 TF 或执行矩阵变换。探索和 SLAM 场景
 通常应选择连续的 `odom`，避免全局 `map` 跳变被误认为障碍速度。
 消息必须提供非空 `header.frame_id`；完整约定见
-[坐标系接口契约](coordinate_frames_CN.md)。
+[坐标系约定](coordinate_frames_CN.md)。
 
 消息应描述用于本帧规划的**完整障碍点集合**：静态点也要包含，且速度置零。这样
 PointCloud2 可以直接替代 LaserScan，不会重复同一障碍的惩罚，也不会漏掉静态环境。
-若上游只输出目标中心或只输出运动目标，应先在跟踪/融合节点中投影为带速度的完整点云。
+若上游只输出目标中心或只输出运动目标，应先在跟踪或融合节点中生成带速度的完整点云。
 
 ## 时间处理
 
@@ -57,7 +58,7 @@ PointCloud2 可以直接替代 LaserScan，不会重复同一障碍的惩罚，�
   `p_now = p_observed + age * v`，之后再从当前时刻预测 `T` 个阶段。
 - 负时间差在 50 ms 内视为时钟抖动；更大的未来时间戳不会被采用。
 
-## 输入模式
+## `obstacle_source` 参数
 
 ROS 参数 `obstacle_source` 支持：
 

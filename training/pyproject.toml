@@ -20,5 +20,24 @@ dependencies = [
 neupan-train = "neupan_training.cli:main"
 neupan-export = "neupan_training.export:main"
 
+[tool.uv]
+package = true
+required-version = ">=0.5.0"
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
+
 [tool.setuptools.packages.find]
 where = ["src"]
