@@ -42,8 +42,7 @@ ament_target_dependencies(neupan_node_component
   visualization_msgs std_msgs diagnostic_msgs tf2 tf2_ros)
 rclcpp_components_register_node(neupan_node_component
   PLUGIN "neupan_ros::NeuPANNode"
-  EXECUTABLE neupan_node
-  NO_UNDEFINED_SYMBOLS)
+  EXECUTABLE neupan_node)
 
 # Minimal reference global planner (A* on map -> initial_path) for demos.
 add_executable(astar_global_node src/astar_global_node.cpp)
@@ -59,6 +58,7 @@ install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  find_package(class_loader REQUIRED)
   ament_add_gtest(test_pointcloud_preprocessor test/test_pointcloud_preprocessor.cpp)
   target_link_libraries(test_pointcloud_preprocessor neupan_obstacle_preprocessing)
   ament_target_dependencies(test_pointcloud_preprocessor sensor_msgs)
@@ -66,6 +66,15 @@ if(BUILD_TESTING)
   ament_add_gtest(test_laser_scan_preprocessor test/test_laser_scan_preprocessor.cpp)
   target_link_libraries(test_laser_scan_preprocessor neupan_obstacle_preprocessing)
   ament_target_dependencies(test_laser_scan_preprocessor sensor_msgs)
+
+  ament_add_gtest(test_pose_timeout test/test_pose_timeout.cpp TIMEOUT 30)
+  ament_target_dependencies(test_pose_timeout
+    class_loader rclcpp rclcpp_components sensor_msgs geometry_msgs
+    diagnostic_msgs tf2_ros)
+  target_compile_definitions(test_pose_timeout PRIVATE
+    NEUPAN_NODE_LIBRARY="$<TARGET_FILE:neupan_node_component>"
+    NEUPAN_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/../neupan_core/tests/data/no_obstacles.yaml")
+  add_dependencies(test_pose_timeout neupan_node_component)
 endif()
 
 # Vendor the DUNE model from neupan_core into our own share, so the launch file

@@ -61,11 +61,12 @@ ros2 launch neupan_sim quick_start.launch.py
 
 工作空间结构见 [src/README.md](src/README.md)，离线模型训练见
 [`training/README.md`](training/README.md)。
+[Scout Mini Diff 示例](examples/scout_mini_diff/README.md) 提供 612 mm × 580 mm
+车体的模型训练、配套配置和运行方法。
 
 ## 文档
 
 - [坐标系约定](docs/coordinate_frames_CN.md)
-- [算法等价性说明](docs/algorithm_equivalence_CN.md)
 - [ROS 2 话题概览](docs/ros_interfaces_CN.md)
 - [动态障碍物消息约定](docs/dynamic_obstacles_CN.md)
 

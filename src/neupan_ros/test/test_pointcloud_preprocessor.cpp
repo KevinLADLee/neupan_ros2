@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <limits>
 #include <stdexcept>
 
@@ -145,4 +147,93 @@ TEST(PointCloudPreprocessor, RejectsVelocityWithoutIntensity) {
       sensor_msgs::msg::PointField::FLOAT32);
   modifier.resize(1);
   EXPECT_THROW(neupan_ros::preprocessPointCloud(msg), std::invalid_argument);
+}
+
+namespace {
+
+sensor_msgs::msg::PointCloud2 makePaddedCloud(bool dynamic, bool bigendian) {
+  sensor_msgs::msg::PointCloud2 msg;
+  const std::vector<std::string> names = dynamic
+      ? std::vector<std::string>{"x", "y", "z", "intensity", "vx", "vy"}
+      : std::vector<std::string>{"x", "y", "z"};
+  for (std::size_t i = 0; i < names.size(); ++i) {
+    sensor_msgs::msg::PointField field;
+    field.name = names[i];
+    field.offset = 1 + 4 * i;  // Deliberately unaligned.
+    field.datatype = sensor_msgs::msg::PointField::FLOAT32;
+    field.count = 1;
+    msg.fields.push_back(field);
+  }
+  msg.width = 2;
+  msg.height = 2;
+  msg.point_step = 4 * names.size() + 4;
+  msg.row_step = msg.width * msg.point_step + 12;
+  msg.is_bigendian = bigendian;
+  msg.data.resize(msg.height * msg.row_step, 0);
+  for (uint32_t row = 0; row < msg.height; ++row) {
+    for (uint32_t col = 0; col < msg.width; ++col) {
+      const float index = row * msg.width + col;
+      const float values[] = {1 + index, -2 - index, 0, 42, index / 4, -0.5F};
+      for (std::size_t field = 0; field < names.size(); ++field) {
+        uint32_t bits;
+        std::memcpy(&bits, &values[field], sizeof(bits));
+        const auto offset = row * msg.row_step + col * msg.point_step +
+                            msg.fields[field].offset;
+        for (int byte = 0; byte < 4; ++byte)
+          msg.data[offset + byte] = bits >> (8 * (bigendian ? 3 - byte : byte));
+      }
+    }
+  }
+  return msg;
+}
+
+}  // namespace
+
+TEST(PointCloudPreprocessor, OrganizedRowsSkipPaddingAndDecodeUnalignedFields) {
+  for (bool dynamic : {false, true}) {
+    for (bool bigendian : {false, true}) {
+      SCOPED_TRACE(::testing::Message() << "dynamic=" << dynamic
+                                       << " bigendian=" << bigendian);
+      const auto cloud =
+          neupan_ros::preprocessPointCloud(makePaddedCloud(dynamic, bigendian));
+      ASSERT_EQ(cloud.points.cols(), 4);
+      ASSERT_EQ(cloud.velocities.cols(), 4);
+      EXPECT_EQ(cloud.discarded_points, 0U);
+      for (int i = 0; i < 4; ++i) {
+        EXPECT_DOUBLE_EQ(cloud.points(0, i), 1 + i);
+        EXPECT_DOUBLE_EQ(cloud.points(1, i), -2 - i);
+        EXPECT_DOUBLE_EQ(cloud.velocities(0, i), dynamic ? i / 4.0 : 0.0);
+        EXPECT_DOUBLE_EQ(cloud.velocities(1, i), dynamic ? -0.5 : 0.0);
+      }
+    }
+  }
+}
+
+TEST(PointCloudPreprocessor, RejectsMalformedLayoutBeforeReadingData) {
+  auto msg = makePaddedCloud(true, false);
+  msg.data.pop_back();
+  EXPECT_THROW(neupan_ros::preprocessPointCloud(msg), std::invalid_argument);
+  msg = makePaddedCloud(true, false);
+  msg.row_step = msg.width * msg.point_step - 1;
+  msg.data.resize(msg.row_step * msg.height);
+  EXPECT_THROW(neupan_ros::preprocessPointCloud(msg), std::invalid_argument);
+  msg = makePaddedCloud(true, false);
+  msg.point_step = 0;
+  EXPECT_THROW(neupan_ros::preprocessPointCloud(msg), std::invalid_argument);
+  for (const auto offset : {25U, std::numeric_limits<uint32_t>::max()}) {
+    msg = makePaddedCloud(true, false);
+    msg.fields.back().offset = offset;
+    EXPECT_THROW(neupan_ros::preprocessPointCloud(msg), std::invalid_argument);
+  }
+}
+
+TEST(PointCloudPreprocessor, AcceptsEmptyCloudWithDeclaredFields) {
+  auto msg = makePaddedCloud(false, false);
+  msg.width = 0;
+  msg.height = 1;
+  msg.row_step = 0;
+  msg.data.clear();
+  const auto cloud = neupan_ros::preprocessPointCloud(msg);
+  EXPECT_EQ(cloud.points.cols(), 0);
+  EXPECT_EQ(cloud.velocities.cols(), 0);
 }

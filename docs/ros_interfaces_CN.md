@@ -48,6 +48,7 @@ PointCloud2 的唯一 XYZIV 定义是
 | `planning_frame` | `odom` | 局部优化使用的连续参考坐标系 |
 | `base_frame` | `base_link` | 机器人本体坐标系 |
 | `control_rate` | `50.0` | 控制频率，Hz |
+| `pose_timeout` | `0.5` | 机器人位姿 TF 的最大年龄，s；必须为有限正数 |
 | `obstacle_source` | `auto` | `scan`、`pointcloud` 或 `auto` |
 | `scan_timeout` | `0.5` | LaserScan 新鲜度上限，s |
 | `pointcloud_timeout` | `0.5` | PointCloud2 新鲜度上限，s |
@@ -65,6 +66,11 @@ PointCloud2 的唯一 XYZIV 定义是
 
 `planning_frame` 取代了旧 `map_frame` 参数，不提供兼容别名。探索和 SLAM 通常使用
 `odom`；固定世界仿真可以显式使用 `map`。完整规则见[坐标系接口契约](coordinate_frames_CN.md)。
+
+机器人变换 `planning_frame <- base_frame` 的时间戳超过 `pose_timeout`，或领先当前时间
+超过 50 ms 时，每个控制周期都发布零速度和 WARN 诊断；新鲜 TF 恢复后自动继续规划。
+年龄按节点 ROS 时钟计算（启用仿真时间时使用仿真时钟）。参考路径坐标系的静态变换不受
+此超时约束。可通过 `ros2 launch neupan_ros neupan.launch.py pose_timeout:=0.3` 调整阈值。
 
 ## `astar_global_node`
 

@@ -8,27 +8,42 @@ version = "0.1.0"
 description = "Offline DUNE training and model export for neupan_core"
 requires-python = ">=3.10"
 license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 dependencies = [
   "colorama",
   "cvxpy",
   "ecos",
   "numpy",
+  "pyyaml",
   "rich",
   "torch>=2.1",
 ]
 
+[dependency-groups]
+cpu = ["torch>=2.1"]
+gpu = ["torch>=2.1"]
+
 [project.scripts]
 neupan-train = "neupan_training.cli:main"
 neupan-export = "neupan_training.export:main"
+neupan-benchmark = "neupan_training.benchmark:main"
 
 [tool.uv]
 package = true
-required-version = ">=0.5.0"
+required-version = ">=0.8.16"
+default-groups = ["gpu"]
+conflicts = [[{ group = "cpu" }, { group = "gpu" }]]
 
 [tool.uv.sources]
 torch = [
-  { index = "pytorch-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+  { index = "pytorch-cpu", group = "cpu" },
+  { index = "pytorch-cu128", group = "gpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

@@ -61,6 +61,10 @@ if(BUILD_TESTING)
 endif()
 
 if(NEUPAN_BUILD_TOOLS)
+  add_executable(neupan_verify_model tools/verify_model.cpp)
+  target_link_libraries(neupan_verify_model PRIVATE neupan)
+  install(TARGETS neupan_verify_model RUNTIME DESTINATION bin)
+
   add_executable(neupan_bench tools/bench.cpp)
   target_link_libraries(neupan_bench PRIVATE neupan)
   target_compile_definitions(neupan_bench PRIVATE

@@ -8,6 +8,31 @@ on:
   workflow_dispatch:
 
 jobs:
+  training:
+    name: offline training and model export
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.8.16'
+      - name: Install CPU test environment
+        run: uv sync --project training --locked --no-default-groups --group cpu
+      - name: Build model verification tool
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libeigen3-dev
+          g++ -std=c++17 -O2 -I/usr/include/eigen3 -Isrc/neupan_core/include \
+            src/neupan_core/tools/verify_model.cpp src/neupan_core/src/mlp.cpp \
+            src/neupan_core/src/tensor_io.cpp -o /tmp/neupan_verify_model
+      - name: Training, resume and Python/C++ export regression tests
+        env:
+          NEUPAN_VERIFY_MODEL: /tmp/neupan_verify_model
+        run: uv run --project training --locked --no-default-groups --group cpu python -m unittest discover -s training/tests -v
+
   build:
     name: build and test (${{ matrix.ros_distro }})
     runs-on: ubuntu-latest

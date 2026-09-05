@@ -23,14 +23,15 @@ from colorama import deinit
 
 deinit()
 
-from torch.utils.data import Dataset, random_split, DataLoader
+from torch.utils.data import Dataset, DataLoader
 import cvxpy as cp
 from rich.console import Console
 from rich.progress import Progress
 from rich.live import Live
 from torch.optim import Adam
 import numpy as np
-from .tensor import np_to_tensor, value_to_tensor, to_device
+from .tensor import np_to_tensor, value_to_tensor
+from .data import rectangle_labels
 import pickle
 import time
 import os
@@ -44,9 +45,12 @@ class PointDataset(Dataset):
         distance_data: distance, scalar
         """
 
-        self.input_data = input_data
-        self.label_data = label_data
-        self.distance_data = distance_data
+        self.input_data = (input_data if isinstance(input_data, torch.Tensor)
+                           else torch.stack(input_data)).contiguous()
+        self.label_data = (label_data if isinstance(label_data, torch.Tensor)
+                           else torch.stack(label_data)).contiguous()
+        self.distance_data = (distance_data if isinstance(distance_data, torch.Tensor)
+                              else torch.stack(distance_data)).contiguous()
 
     def __len__(self):
         return len(self.input_data)
@@ -62,8 +66,11 @@ class PointDataset(Dataset):
 class DUNETrain:
     def __init__(self, model, robot_G, robot_h, checkpoint_path) -> None:
 
-        self.G = robot_G
-        self.h = robot_h
+        self.geometry = {"G": robot_G.detach().cpu().double().clone(),
+                         "h": robot_h.detach().cpu().double().clone()}
+        parameter = next(model.parameters())
+        self.G = robot_G.to(device=parameter.device, dtype=parameter.dtype)
+        self.h = robot_h.to(device=parameter.device, dtype=parameter.dtype)
         self.model = model
 
         self.construct_problem()
@@ -93,8 +100,10 @@ class DUNETrain:
         self.mu = cp.Variable((self.G.shape[0], 1), nonneg=True)
         self.p = cp.Parameter((2, 1))  # points
 
-        cost = self.mu.T @ (self.G.cpu() @ self.p - self.h.cpu())
-        constraints = [cp.norm(self.G.cpu().T @ self.mu) <= 1]
+        g = self.geometry["G"].numpy()
+        h = self.geometry["h"].numpy()
+        cost = self.mu.T @ (g @ self.p - h)
+        constraints = [cp.norm(g.T @ self.mu) <= 1]
 
         self.prob = cp.Problem(cp.Maximize(cost), constraints)
 
@@ -106,198 +115,57 @@ class DUNETrain:
             value_to_tensor(distance_value),
         )
 
-    def generate_data_set(self, data_size=10000, data_range=[-50, -50, 50, 50]):
+    def generate_data_set(self, data_size=10000, data_range=(-50, -50, 50, 50),
+                          seed=None, method="ecos"):
         """
         generate dataset for training
         data_range: [low_x, low_y, high_x, high_y]
         """
 
-        input_data = []
-        label_data = []
-        distance_data = []
-
-        rand_p = np.random.uniform(
+        rand_p = np.random.default_rng(seed).uniform(
             low=data_range[:2], high=data_range[2:], size=(data_size, 2)
         )
-        rand_p_list = [rand_p[i].reshape(2, 1) for i in range(data_size)]
-
-        for p in rand_p_list:
-            results = self.process_data(p)
-            input_data.append(results[0])
-            label_data.append(results[1])
-            distance_data.append(results[2])
-
-        dataset = PointDataset(input_data, label_data, distance_data)
-
-        return dataset
+        if method == "rectangle":
+            labels, distances = rectangle_labels(
+                rand_p, self.geometry["G"].numpy(), self.geometry["h"].numpy())
+        elif method == "ecos":
+            labels = np.empty((data_size, self.G.shape[0], 1))
+            distances = np.empty(data_size)
+            for i, point in enumerate(rand_p):
+                distances[i], labels[i] = self.prob_solve(point.reshape(2, 1))
+        else:
+            raise ValueError(f"Unknown label method: {method}")
+        return PointDataset(torch.from_numpy(rand_p[..., None]).float(),
+                            torch.from_numpy(labels).float(),
+                            torch.from_numpy(distances).float())
 
     def prob_solve(self, p_value):
 
         self.p.value = p_value
         self.prob.solve(solver=cp.ECOS)  # distance
-        # self.prob.solve()  # distance
+        if (self.prob.status != cp.OPTIMAL or self.mu.value is None
+                or not np.isfinite(self.prob.value) or not np.isfinite(self.mu.value).all()):
+            raise RuntimeError(f"ECOS label solve failed at {p_value.ravel()}: {self.prob.status}")
 
         return self.prob.value, self.mu.value
 
     def start(
-        self,
-        data_size: int = 100000,
-        data_range: list[int] = [-25, -25, 25, 25],
-        batch_size: int = 256,
-        epoch: int = 5000,
-        valid_freq: int = 100,
-        save_freq: int = 500,
-        lr: float = 5e-5,
-        lr_decay: float = 0.5,
-        decay_freq: int = 1500,
-        save_loss: bool = False,
-        **kwargs,
+        self, data_size=100000, data_range=(-25, -25, 25, 25),
+        batch_size=1024, epoch=5000, valid_freq=20, save_freq=100,
+        lr=5e-5, lr_decay=0.5, decay_freq=1500, save_loss=False,
+        seed=0, cache_dir=None, label_method="ecos", patience=20,
+        min_delta=0.0, resume=None, robot_config=None, **kwargs,
     ):
-
-        train_dict = {
-            "data_size": data_size,
-            "data_range": data_range,
-            "batch_size": batch_size,
-            "epoch": epoch,
-            "valid_freq": valid_freq,
-            "save_freq": save_freq,
-            "lr": lr,
-            "lr_decay": lr_decay,
-            "decay_freq": decay_freq,
-            "robot_G": self.G,
-            "robot_h": self.h,
-            "model": self.model,
-        }
-
-        with open(self.checkpoint_path + "/train_dict.pkl", "wb") as f:
-            pickle.dump(train_dict, f)
-
-        print(
-            f"data_size: {data_size}, data_range: {data_range}, batch_size: {batch_size}, epoch: {epoch}, valid_freq: {valid_freq}, save_freq: {save_freq}, lr: {lr}, lr_decay: {lr_decay}, decay_freq: {decay_freq}, robot_G: {self.G}, robot_h: {self.h}"
-        )
-
-        with open(self.checkpoint_path + "/results.txt", "a") as f:
-            print(
-                f"data_size: {data_size}, data_range: {data_range}, batch_size: {batch_size}, epoch: {epoch}, valid_freq: {valid_freq}, save_freq: {save_freq}, lr: {lr}, lr_decay: {lr_decay}, decay_freq: {decay_freq}, robot_G: {self.G}, robot_h: {self.h}\n",
-                file=f,
-            )
-
-        self.optimizer.param_groups[0]["lr"] = float(lr)
-        full_model_name = None
-
-        print("dataset generating start ...")
-        dataset = self.generate_data_set(data_size, data_range)
-        train, valid, _ = random_split(
-            dataset, [int(data_size * 0.8), int(data_size * 0.2), 0]
-        )
-
-        train_dataloader = DataLoader(train, batch_size=batch_size)
-        valid_dataloader = DataLoader(valid, batch_size=batch_size)
-
-        print("dataset training start ...")
-
-        with self.live:
-            task = self.progress.add_task("[cyan]Training...", total=epoch)
-
-            for i in range(epoch + 1):
-
-                self.progress.update(task, advance=1)
-                self.live.refresh()
-
-                self.model.train(True)
-
-                mu_loss, distance_loss, fa_loss, fb_loss = self.train_one_epoch(
-                    train_dataloader, False
-                )
-
-                ml, dl, al, bl = (
-                    "{:.2e}".format(mu_loss),
-                    "{:.2e}".format(distance_loss),
-                    "{:.2e}".format(fa_loss),
-                    "{:.2e}".format(fb_loss),
-                )
-
-                if i % valid_freq == 0:
-                    self.model.eval()
-                    (
-                        valid_mu_loss,
-                        valid_distance_loss,
-                        validate_fa_loss,
-                        validate_fb_loss,
-                    ) = self.train_one_epoch(valid_dataloader, True)
-
-                    vml, vdl, val, vbl = (
-                        "{:.2e}".format(valid_mu_loss),
-                        "{:.2e}".format(valid_distance_loss),
-                        "{:.2e}".format(validate_fa_loss),
-                        "{:.2e}".format(validate_fb_loss),
-                    )
-
-                    self.print_loss(
-                        i,
-                        epoch,
-                        ml,
-                        dl,
-                        al,
-                        bl,
-                        vml,
-                        vdl,
-                        val,
-                        vbl,
-                        self.optimizer.param_groups[0]["lr"],
-                    )
-
-                    with open(self.checkpoint_path + "/results.txt", "a") as f:
-                        self.print_loss(
-                            i,
-                            epoch,
-                            ml,
-                            dl,
-                            al,
-                            bl,
-                            vml,
-                            vdl,
-                            val,
-                            vbl,
-                            self.optimizer.param_groups[0]["lr"],
-                            f,
-                        )
-
-                if i % save_freq == 0:
-                    print("save model at epoch {}".format(i))
-                    torch.save(
-                        self.model.state_dict(),
-                        self.checkpoint_path + "/" + "model_" + str(i) + ".pth",
-                    )
-                    full_model_name = (
-                        self.checkpoint_path + "/" + "model_" + str(i) + ".pth"
-                    )
-
-                if (i + 1) % decay_freq == 0:
-                    self.optimizer.param_groups[0]["lr"] = (
-                        self.optimizer.param_groups[0]["lr"] * lr_decay
-                    )
-                    print(
-                        "current learning rate:", self.optimizer.param_groups[0]["lr"]
-                    )
-
-                    with open(self.checkpoint_path + "/results.txt", "a") as f:
-                        print(
-                            "current learning rate:",
-                            self.optimizer.param_groups[0]["lr"],
-                            file=f,
-                        )
-
-                self.loss_of_epoch = mu_loss + distance_loss + fa_loss + fb_loss
-                self.loss_list.append(self.loss_of_epoch)
-
-                if save_loss:
-                    with open(self.checkpoint_path + "/loss.pkl", "wb") as f:
-                        pickle.dump(self.loss_list, f)
-
-        print("finish train, the model is saved in {}".format(full_model_name))
-
-        return full_model_name
+        """Train exactly ``epoch`` total epochs, or resume to that total."""
+        from .run import run_training
+        if kwargs:
+            raise TypeError(f"Unknown training options: {sorted(kwargs)}")
+        config = dict(data_size=data_size, data_range=list(data_range),
+                      batch_size=batch_size, epoch=epoch, valid_freq=valid_freq,
+                      save_freq=save_freq, lr=lr, lr_decay=lr_decay,
+                      decay_freq=decay_freq, seed=seed, label_method=label_method,
+                      patience=patience, min_delta=min_delta)
+        return run_training(self, config, cache_dir, resume, robot_config)
 
     def train_one_epoch(self, train_dataloader, validate=False):
         """
@@ -308,41 +176,40 @@ class DUNETrain:
             fb: mu^T * G * R^T * p - mu^T * h  ==> lam^T * p + mu^T * h
         """
 
-        mu_loss, distance_loss, fa_loss, fb_loss = 0, 0, 0, 0
+        # Accumulate detached metrics on-device; transfer only once per epoch.
+        totals = torch.zeros(4, dtype=torch.float64, device=self.G.device)
+        count = 0
+        with torch.set_grad_enabled(not validate):
+            for input_point, label_mu, label_distance in train_dataloader:
+                input_point, label_mu, label_distance = (
+                    tensor.to(self.G.device) for tensor in (input_point, label_mu, label_distance))
+                if not validate:
+                    self.optimizer.zero_grad(set_to_none=True)
 
-        for input_point, label_mu, label_distance in train_dataloader:
+                # Keep the batch dimension, including a final batch of one point.
+                input_point = input_point.squeeze(-1)
+                output_mu = self.model(input_point).unsqueeze(-1)
 
-            self.optimizer.zero_grad()
+                distance = self.cal_distance(output_mu, input_point)
+                mse_mu = self.loss_fn(output_mu, label_mu)
+                mse_distance = self.loss_fn(distance, label_distance)
+                mse_fa, mse_fb = self.cal_loss_fab(
+                    output_mu, label_mu, input_point, deterministic=validate)
 
-            input_point = torch.squeeze(input_point)
-            output_mu = self.model(input_point)
-            output_mu = torch.unsqueeze(output_mu, 2)
+                if not validate:
+                    loss = mse_mu + mse_distance + mse_fa + mse_fb
+                    loss.backward()
+                    self.optimizer.step()
 
-            distance = self.cal_distance(output_mu, input_point)
+                size = input_point.shape[0]
+                totals += torch.stack((mse_mu, mse_distance, mse_fa, mse_fb)).detach() * size
+                count += size
 
-            mse_mu = self.loss_fn(output_mu, label_mu)
-            mse_distance = self.loss_fn(distance, label_distance)
-            mse_fa, mse_fb = self.cal_loss_fab(output_mu, label_mu, input_point)
+        if not count:
+            raise ValueError("Cannot train or validate an empty dataset")
+        return tuple((totals / count).tolist())
 
-            loss = mse_mu + mse_distance + mse_fa + mse_fb
-
-            if not validate:
-                loss.backward()
-                self.optimizer.step()
-
-            mu_loss += mse_mu.item()
-            distance_loss += mse_distance.item()
-            fa_loss += mse_fa.item()
-            fb_loss += mse_fb.item()
-
-        return (
-            mu_loss / len(train_dataloader),
-            distance_loss / len(train_dataloader),
-            fa_loss / len(train_dataloader),
-            fb_loss / len(train_dataloader),
-        )
-
-    def cal_loss_fab(self, output_mu, label_mu, input_point):
+    def cal_loss_fab(self, output_mu, label_mu, input_point, theta=None, deterministic=False):
         """
         calculate the loss of fa and fb
 
@@ -350,38 +217,35 @@ class DUNETrain:
         fb: mu^T * G * R^T * p - mu^T * h  ==> lam^T * p + mu^T * h
         """
 
-        mu1 = output_mu
-        mu2 = label_mu
-        ip = torch.unsqueeze(input_point, 2)
-        mu1T = torch.transpose(mu1, 1, 2)
-        mu2T = torch.transpose(mu2, 1, 2)
+        # fa and fb are linear in mu, so project the residual only once.
+        delta_mu = (output_mu - label_mu).squeeze(-1)
+        if deterministic:
+            # Exact average over the fixed angles 0, pi/2, pi, 3pi/2.
+            # Also equals the expectation over a uniform rotation. No RNG or
+            # batch-dependent rotation choices enter validation/early stopping.
+            normal_squared = (delta_mu @ self.G).square().sum(dim=-1)
+            offset = (delta_mu @ self.h).squeeze(-1)
+            return (normal_squared.mean() / 2,
+                    (normal_squared * input_point.square().sum(dim=-1) / 2
+                     + offset.square()).mean())
+        if theta is None:
+            theta = torch.rand((), device=self.G.device, dtype=self.G.dtype) * (2 * np.pi)
+        else:
+            theta = torch.as_tensor(theta, device=self.G.device, dtype=self.G.dtype)
+        c, s = theta.cos(), theta.sin()
+        R = torch.stack((c, -s, s, c)).reshape(2, 2)
+        delta_fa = delta_mu @ (-R @ self.G.T).T
+        delta_fb = (delta_fa * input_point).sum(dim=-1) + (delta_mu @ self.h).squeeze(-1)
 
-        theta = np.random.uniform(0, 2 * np.pi)
-        R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-        R = np_to_tensor(R)
-
-        fa = torch.transpose(-R @ self.G.T @ mu1, 1, 2)
-        fa_label = torch.transpose(-R @ self.G.T @ mu2, 1, 2)
-
-        fb = fa @ ip + mu1T @ self.h
-        fb_label = fa_label @ ip + mu2T @ self.h
-
-        mse_lamt = self.loss_fn(fa, fa_label)
-        mse_lamtb = self.loss_fn(fb, fb_label)
+        mse_lamt = delta_fa.square().mean()
+        mse_lamtb = delta_fb.square().mean()
 
         return mse_lamt, mse_lamtb
 
     def cal_distance(self, mu, input_point):
 
-        input_point = torch.unsqueeze(input_point, 2)
-
-        temp = self.G @ input_point - self.h
-
-        muT = torch.transpose(mu, 1, 2)
-
-        distance = torch.squeeze(torch.bmm(muT, temp))
-
-        return distance
+        temp = input_point @ self.G.T - self.h.squeeze(-1)
+        return (mu.squeeze(-1) * temp).sum(dim=-1)
 
     def print_loss(self, i, epoch, ml, dl, al, bl, vml, vdl, val, vbl, lr, file=None):
 
@@ -432,14 +296,23 @@ class DUNETrain:
                 file=file,
             )
 
-    def test(self, model_pth, train_dict_kwargs, data_size_list=0, **kwargs):
-
-        with open(train_dict_kwargs, "rb") as f:
-            train_dict = pickle.load(f)
-
-        model = to_device(train_dict["model"])
-        model.load_state_dict(torch.load(model_pth))
-        data_range = train_dict["data_range"]
+    def test(self, model_pth, train_dict_kwargs=None, data_size_list=(1024,), **kwargs):
+        from .artifacts import load_checkpoint
+        from .model import ObsPointNet
+        if train_dict_kwargs is None:
+            saved = load_checkpoint(model_pth)
+            if any(not torch.equal(saved["geometry"][key], self.geometry[key]) for key in ("G", "h")):
+                raise ValueError("Test geometry differs from checkpoint")
+            model = ObsPointNet(2, self.G.shape[0]).to(self.G.device)
+            model.load_state_dict(saved["model_state"])
+            data_range = saved["config"]["data_range"]
+        else:
+            with open(train_dict_kwargs, "rb") as f:
+                train_dict = pickle.load(f)
+            model = train_dict["model"].to(self.G.device)
+            model.load_state_dict(torch.load(model_pth, map_location=self.G.device, weights_only=True))
+            data_range = train_dict["data_range"]
+        model.eval()
 
         print("dataset generating start ...")
 
@@ -460,6 +333,7 @@ class DUNETrain:
             fa_loss_list = []
             fb_loss_list = []
             inference_time_list = []
+            batch_sizes = []
 
             for input_point, label_mu, label_distance in test_dataloader:
                 average_loss_list, inference_time = self.test_one_epoch(
@@ -471,11 +345,12 @@ class DUNETrain:
                 fa_loss_list.append(average_loss_list[2])
                 fb_loss_list.append(average_loss_list[3])
                 inference_time_list.append(inference_time)
+                batch_sizes.append(len(input_point))
 
-            avg_mu_loss = sum(mu_loss_list) / len(mu_loss_list)
-            avg_distance_loss = sum(distance_loss_list) / len(distance_loss_list)
-            avg_fa_loss = sum(fa_loss_list) / len(fa_loss_list)
-            avg_fb_loss = sum(fb_loss_list) / len(fb_loss_list)
+            avg_mu_loss = np.average(mu_loss_list, weights=batch_sizes)
+            avg_distance_loss = np.average(distance_loss_list, weights=batch_sizes)
+            avg_fa_loss = np.average(fa_loss_list, weights=batch_sizes)
+            avg_fb_loss = np.average(fb_loss_list, weights=batch_sizes)
             avg_inference_time = sum(inference_time_list) / len(inference_time_list)
 
             with open(os.path.dirname(model_pth) + "/test_results.txt", "a") as f:
@@ -504,13 +379,18 @@ class DUNETrain:
             )
         )
 
+    @torch.no_grad()
     def test_one_epoch(self, model, input_point, label_mu, label_distance, data_size):
+        from .run import synchronize
+        input_point, label_mu, label_distance = (
+            tensor.to(self.G.device) for tensor in (input_point, label_mu, label_distance))
+        input_point = input_point.squeeze(-1)
 
-        input_point = torch.squeeze(input_point)
-
-        start_time = time.time()
+        synchronize(self.G.device)
+        start_time = time.perf_counter()
         output_mu = model(input_point)
-        inference_time = time.time() - start_time
+        synchronize(self.G.device)
+        inference_time = time.perf_counter() - start_time
 
         output_mu = torch.unsqueeze(output_mu, 2)
 
@@ -518,7 +398,7 @@ class DUNETrain:
 
         mse_mu = self.loss_fn(output_mu, label_mu)
         mse_distance = self.loss_fn(distance, label_distance)
-        mse_fa, mse_fb = self.cal_loss_fab(output_mu, label_mu, input_point)
+        mse_fa, mse_fb = self.cal_loss_fab(output_mu, label_mu, input_point, deterministic=True)
 
         # loss = mse_mu.item() + mse_distance + mse_fa + mse_fb
         # average_loss_list = [mse_mu.item() / data_size, mse_distance.item() / data_size, mse_fa.item() / data_size, mse_fb.item() / data_size]

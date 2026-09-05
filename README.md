@@ -63,11 +63,12 @@ options.
 
 See [src/README.md](src/README.md) for the workspace structure. Offline model
 training is documented in [`training/README.md`](training/README.md).
+The [Scout Mini Diff example](examples/scout_mini_diff/README.md) shows how to
+train and run a 612 mm × 580 mm robot with a matching model and configuration.
 
 ## Documentation
 
 - [Coordinate-frame contract](docs/coordinate_frames.md)
-- [Algorithm equivalence](docs/algorithm_equivalence_CN.md)
 - [ROS 2 topic overview (Chinese)](docs/ros_interfaces_CN.md)
 - [Dynamic-obstacle message contract (Chinese)](docs/dynamic_obstacles_CN.md)
 

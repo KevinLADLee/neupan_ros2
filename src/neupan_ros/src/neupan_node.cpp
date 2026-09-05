@@ -91,6 +91,7 @@ class NeuPANNode final : public rclcpp::Node {
     planning_frame_ =
         declare_parameter<std::string>("planning_frame", "odom");
     base_frame_ = declare_parameter<std::string>("base_frame", "base_link");
+    pose_timeout_ = declare_parameter<double>("pose_timeout", 0.5);
     marker_size_ = declare_parameter<double>("marker_size", 0.05);
     marker_z_ = declare_parameter<double>("marker_z", 1.0);
     scan_config_.angle_min =
@@ -119,6 +120,8 @@ class NeuPANNode final : public rclcpp::Node {
     if (planning_frame_.empty() || base_frame_.empty())
       throw std::runtime_error(
           "planning_frame and base_frame must not be empty");
+    if (!std::isfinite(pose_timeout_) || pose_timeout_ <= 0.0)
+      throw std::runtime_error("pose_timeout must be finite and > 0");
     if (scan_config_.downsample < 1 || scan_timeout_ <= 0.0 ||
         pointcloud_timeout_ <= 0.0)
       throw std::runtime_error(
@@ -192,11 +195,24 @@ class NeuPANNode final : public rclcpp::Node {
 
  private:
   std::optional<neupan::Vec3> lookupPose(const std::string& target,
-                                         const std::string& source) {
+                                      const std::string& source,
+                                      double max_age = 0.0) {
     if (target == source) return neupan::Vec3::Zero();
     try {
       const auto tfs = tf_buffer_->lookupTransform(target, source,
                                                    tf2::TimePointZero);
+      // Latest TF remains cached after its publisher stops. Only the robot
+      // pose needs this age bound; reference-frame transforms may be static.
+      if (max_age > 0.0) {
+        const double age = (now() - rclcpp::Time(tfs.header.stamp)).seconds();
+        if (age > max_age || age < -0.05) {
+          RCLCPP_WARN_THROTTLE(
+              get_logger(), *get_clock(), 1000,
+              "robot pose TF %s <- %s has invalid age %.3f s (timeout %.3f s)",
+              target.c_str(), source.c_str(), age, max_age);
+          return std::nullopt;
+        }
+      }
       return neupan::Vec3(tfs.transform.translation.x,
                           tfs.transform.translation.y,
                           quatToYaw(tfs.transform.rotation));
@@ -225,7 +241,7 @@ class NeuPANNode final : public rclcpp::Node {
     }
   }
 
-  bool requireFrame(const std::string& frame, const char* input_name) const {
+  bool requireFrame(const std::string& frame, const char* input_name) {
     if (!frame.empty()) return true;
     RCLCPP_ERROR_THROTTLE(
         get_logger(), *get_clock(), 2000,
@@ -258,9 +274,9 @@ class NeuPANNode final : public rclcpp::Node {
   }
 
   void run() {
-    const auto state = lookupPose(planning_frame_, base_frame_);
+    const auto state = lookupPose(planning_frame_, base_frame_, pose_timeout_);
     if (!state) {
-      halt("no robot pose (TF planning_frame <- base_frame), holding still");
+      halt("no fresh robot pose (TF planning_frame <- base_frame), holding still");
       return;
     }
     robot_state_ = *state;
@@ -759,6 +775,7 @@ class NeuPANNode final : public rclcpp::Node {
   std::unique_ptr<neupan::NeuPANPlanner> planner_;
 
   std::string planning_frame_, base_frame_;
+  double pose_timeout_ = 0.5;
   std::string active_obstacle_source_ = "none";
   std::string active_obstacle_format_ = "none";
   ObstacleSource obstacle_source_ = ObstacleSource::Auto;

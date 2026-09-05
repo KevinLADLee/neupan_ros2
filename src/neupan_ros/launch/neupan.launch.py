@@ -4,6 +4,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -24,6 +25,8 @@ def generate_launch_description():
             'dune_checkpoint': default_model,
             'planning_frame': planning_frame,
             'base_frame': base_frame,
+            'pose_timeout': ParameterValue(
+                LaunchConfiguration('pose_timeout'), value_type=float),
         }],
         remappings=[
             ('neupan_cmd_vel', 'cmd_vel'),
@@ -45,6 +48,9 @@ def generate_launch_description():
     ld.add_action(DeclareLaunchArgument(
         'base_frame', default_value='base_link',
         description='Robot body frame.'))
+    ld.add_action(DeclareLaunchArgument(
+        'pose_timeout', default_value='0.5',
+        description='Maximum robot TF age in seconds before stopping.'))
     ld.add_action(neupan_node)
     ld.add_action(astar_node)
 

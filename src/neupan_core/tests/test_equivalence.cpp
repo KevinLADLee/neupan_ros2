@@ -196,3 +196,21 @@ TEST(Equivalence, ExternalPathPreservesSamplesGearAndAverageInterval) {
     EXPECT_LT((path.initialPath()[i] - input[i]).norm(), 1e-14);
   EXPECT_DOUBLE_EQ(path.pathInterval(), 2.0);
 }
+
+TEST(Equivalence, SparseExternalPathMatchesUpstreamReferenceProgress) {
+  // Original NeuPAN f5ae6d8, initial_path.py: set_initial_path preserves
+  // samples and generate_nom_ref_state starts at cur_point, not a projection.
+  const Robot robot = testRobot(10);
+  InitialPath path(robot, 1.0, {});
+  path.setInitialPath({{0.0, 0.0, 0.0, 1.0}, {10.0, 0.0, 0.0, 1.0}});
+  const Mat2X controls = Mat2X::Zero(2, robot.T);
+  for (double x : {0.0, 1.0, 2.0, 4.0, 5.1}) {
+    SCOPED_TRACE(x);
+    const Vec3 state(x, 0.0, 0.0);
+    EXPECT_FALSE(path.checkArrive(state));
+    const auto ref = path.generateNomRefState(state, controls, 1.0);
+    EXPECT_EQ(path.point_index_, x > 5.0 ? 1 : 0);
+    for (int t = 0; t <= robot.T; ++t)
+      EXPECT_NEAR(ref.ref_s(0, t), x > 5.0 ? 10.0 : 0.1 * t, 1e-12);
+  }
+}

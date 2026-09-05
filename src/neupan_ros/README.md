@@ -52,6 +52,7 @@ velocity command and planner state.
 | `planning_frame` | `string` | `odom` | Common coordinate frame for planning, paths, and markers |
 | `base_frame` | `string` | `base_link` | Robot body frame used for the TF pose lookup |
 | `control_rate` | `double` | `50.0` | Planning timer frequency in Hz |
+| `pose_timeout` | `double` | `0.5` | Maximum robot TF age in seconds; must be finite and positive |
 | `include_initial_path_direction` | `bool` | `false` | Use the orientation of each input path pose instead of the XY tangent |
 | `obstacle_source` | `string` | `auto` | `scan`, `pointcloud`, or `auto`; `auto` prefers a fresh point cloud |
 | `scan_timeout` | `double` | `0.5` | Maximum LaserScan age in seconds |
@@ -71,6 +72,17 @@ velocity command and planner state.
 
 The keys inside `config_file` configure the C++ planner; they are not ROS 2 node
 parameters. See the [`neupan_core` planner configuration](../neupan_core/README.md#planner-configuration).
+
+The robot transform `planning_frame <- base_frame` must stay fresh. If its
+timestamp is older than `pose_timeout` (or more than 50 ms in the future), the
+node publishes zero velocity and a warning diagnostic on every control cycle.
+Tracking resumes automatically once a fresh robot transform is available.
+Age uses the node's ROS clock, including simulated time when enabled. This
+check does not expire static reference-frame transforms. For example:
+
+```bash
+ros2 launch neupan_ros neupan.launch.py pose_timeout:=0.3
+```
 
 #### Subscribed topics
 
@@ -95,6 +107,9 @@ Supported PointCloud2 field layouts are:
 | XYZIV | `x`, `y`, `z`, `intensity`, `vx`, `vy` | Dynamic points with planar velocity in the message frame |
 
 Non-finite points are discarded, and `vx` and `vy` must be present together.
+Organized clouds may contain row padding; both byte orders and unaligned
+FLOAT32 fields are supported. Inconsistent strides, data lengths, or field
+offsets are rejected before point data is read.
 See the [dynamic-obstacle message contract](../../docs/dynamic_obstacles_CN.md).
 
 #### Published topics

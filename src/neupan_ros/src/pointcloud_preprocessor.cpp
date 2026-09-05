@@ -6,11 +6,12 @@
 #include "neupan_ros/pointcloud_preprocessor.hpp"
 
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <stdexcept>
 #include <string>
 
 #include <sensor_msgs/msg/point_field.hpp>
-#include <sensor_msgs/point_cloud2_iterator.hpp>
 
 namespace neupan_ros {
 namespace {
@@ -32,20 +33,39 @@ bool hasFloat32Field(const sensor_msgs::msg::PointCloud2& msg,
   return false;
 }
 
-void requireFloat32(const sensor_msgs::msg::PointCloud2& msg,
-                    const std::string& name) {
+std::size_t requireFloat32(const sensor_msgs::msg::PointCloud2& msg,
+                          const std::string& name) {
   if (!hasFloat32Field(msg, name))
     throw std::invalid_argument("PointCloud2 field '" + name +
                                 "' must be scalar FLOAT32");
+  for (const auto& field : msg.fields) {
+    if (field.name != name) continue;
+    if (field.offset > msg.point_step ||
+        msg.point_step - field.offset < sizeof(float))
+      throw std::invalid_argument("PointCloud2 field '" + name +
+                                  "' extends beyond point_step");
+    return field.offset;
+  }
+  throw std::invalid_argument("PointCloud2 field '" + name + "' is missing");
+}
+
+float readFloat32(const uint8_t* data, bool bigendian) {
+  // Byte assembly handles both endiannesses and unaligned field offsets.
+  uint32_t bits = 0;
+  for (int i = 0; i < 4; ++i)
+    bits |= static_cast<uint32_t>(data[i]) << (8 * (bigendian ? 3 - i : i));
+  float value;
+  std::memcpy(&value, &bits, sizeof(value));
+  return value;
 }
 
 }  // namespace
 
 ObstacleObservation preprocessPointCloud(
     const sensor_msgs::msg::PointCloud2& msg) {
-  requireFloat32(msg, "x");
-  requireFloat32(msg, "y");
-  requireFloat32(msg, "z");
+  const auto x_offset = requireFloat32(msg, "x");
+  const auto y_offset = requireFloat32(msg, "y");
+  const auto z_offset = requireFloat32(msg, "z");
 
   ObstacleObservation result;
   const bool has_intensity = hasField(msg, "intensity");
@@ -59,10 +79,12 @@ ObstacleObservation preprocessPointCloud(
   if (has_velocity && !has_intensity)
     throw std::invalid_argument(
         "XYZIV PointCloud2 requires an intensity field");
-  if (has_velocity) {
-    requireFloat32(msg, "vx");
-    requireFloat32(msg, "vy");
-  }
+  const auto vx_offset = has_velocity ? requireFloat32(msg, "vx") : 0;
+  const auto vy_offset = has_velocity ? requireFloat32(msg, "vy") : 0;
+
+  if (static_cast<uint64_t>(msg.width) * msg.point_step > msg.row_step ||
+      static_cast<uint64_t>(msg.row_step) * msg.height != msg.data.size())
+    throw std::invalid_argument("PointCloud2 has inconsistent row_step or data size");
 
   const std::size_t count =
       static_cast<std::size_t>(msg.width) * msg.height;
@@ -76,28 +98,26 @@ ObstacleObservation preprocessPointCloud(
     ++output_index;
   };
 
-  sensor_msgs::PointCloud2ConstIterator<float> x(msg, "x");
-  sensor_msgs::PointCloud2ConstIterator<float> y(msg, "y");
-  sensor_msgs::PointCloud2ConstIterator<float> z(msg, "z");
-
-  if (has_velocity) {
-    sensor_msgs::PointCloud2ConstIterator<float> vx(msg, "vx");
-    sensor_msgs::PointCloud2ConstIterator<float> vy(msg, "vy");
-    for (; x != x.end(); ++x, ++y, ++z, ++vx, ++vy) {
-      if (!std::isfinite(*x) || !std::isfinite(*y) || !std::isfinite(*z) ||
-          !std::isfinite(*vx) || !std::isfinite(*vy)) {
+  for (uint32_t row = 0; row < msg.height; ++row) {
+    for (uint32_t col = 0; col < msg.width; ++col) {
+      const auto* point = msg.data.data() +
+                          static_cast<std::size_t>(row) * msg.row_step +
+                          static_cast<std::size_t>(col) * msg.point_step;
+      const float x = readFloat32(point + x_offset, msg.is_bigendian);
+      const float y = readFloat32(point + y_offset, msg.is_bigendian);
+      const float z = readFloat32(point + z_offset, msg.is_bigendian);
+      const float vx = has_velocity
+                           ? readFloat32(point + vx_offset, msg.is_bigendian)
+                           : 0.0F;
+      const float vy = has_velocity
+                           ? readFloat32(point + vy_offset, msg.is_bigendian)
+                           : 0.0F;
+      if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z) ||
+          !std::isfinite(vx) || !std::isfinite(vy)) {
         ++result.discarded_points;
         continue;
       }
-      append(*x, *y, *vx, *vy);
-    }
-  } else {
-    for (; x != x.end(); ++x, ++y, ++z) {
-      if (!std::isfinite(*x) || !std::isfinite(*y) || !std::isfinite(*z)) {
-        ++result.discarded_points;
-        continue;
-      }
-      append(*x, *y, 0.0, 0.0);
+      append(x, y, vx, vy);
     }
   }
 

@@ -55,6 +55,8 @@ const neupan::Vec2 command = planner.forward(state, points, velocities, info);
 Reference paths can be supplied with `setInitialPath`, `setWaypoints`, or
 `updateInitialPathFromGoal`. `replaceInitialPath` preserves progress during a
 global-path update, while `reset` clears planner progress and warm-start state.
+`setInitialPath` preserves the supplied samples and expects a dense path. Use
+`setWaypoints` to generate a path from sparse waypoints.
 
 The core performs no coordinate transforms. State, path, obstacle positions,
 and velocities must use one right-handed planar frame. See the
