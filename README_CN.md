@@ -14,7 +14,7 @@
 <a href="https://docs.ros.org/en/humble/"><img src="https://img.shields.io/badge/ROS%202-Humble-blue" alt="ROS 2 Humble"></a>
 <a href="https://docs.ros.org/en/jazzy/"><img src="https://img.shields.io/badge/ROS%202-Jazzy-blue" alt="ROS 2 Jazzy"></a>
 <a href="https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml"><img src="https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml/badge.svg" alt="ROS 2 CI"></a>
-<a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-blue" alt="GPL v3 协议"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later 协议"></a>
 
 [English](README.md) | [中文](README_CN.md)
 
@@ -42,7 +42,6 @@ NeuPAN ROS 2 通过原生 C++ 实现，将
 ROS_DISTRO=humble
 source /opt/ros/$ROS_DISTRO/setup.bash
 ./install_deps.sh
-./setup.sh
 ./build.sh
 source install/setup.bash
 ros2 launch neupan_sim quick_start.launch.py
@@ -51,10 +50,11 @@ ros2 launch neupan_sim quick_start.launch.py
 该命令会启动演示和 RViz；无界面运行时添加 `rviz:=false`。系统要求和构建选项见
 [安装说明](docs/installation_CN.md)。
 
-## ROS 2 功能包
+## 工作空间功能包
 
 | 功能包 | 用途 | 文档 |
 | --- | --- | --- |
+| `neupan_solver_vendor` | 离线求解器依赖 | [README](thirdparty/README.md) |
 | `neupan_core` | NeuPAN 规划库 | [README](src/neupan_core/README.md) |
 | `neupan_ros` | ROS 2 集成 | [README](src/neupan_ros/README.md) |
 | `neupan_sim` | 仿真与验证 | [README](src/neupan_sim/README.md) |
@@ -87,4 +87,9 @@ ros2 launch neupan_sim quick_start.launch.py
 
 ## 开源协议
 
-[GNU General Public License v3.0](LICENSE)。
+NeuPAN ROS 2 的第一方代码采用
+[GNU General Public License v3.0 或更高版本](LICENSE)。本项目移植或参考的
+NeuPAN、NeuPAN-ROS、neupan_cpp 和 DDR-opt 均为 GPL-3.0 项目。
+
+随仓库提供的求解器组件保留各自的 Apache-2.0 或 BSD-3-Clause 协议。版本、来源、
+许可证文件及再分发声明见[第三方依赖清单](thirdparty/README.md)。

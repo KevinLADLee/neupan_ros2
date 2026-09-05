@@ -23,49 +23,49 @@ source /opt/ros/$ROS_DISTRO/setup.bash
 将 `ROS_DISTRO` 设置为 `humble` 或 `jazzy`。`install_deps.sh` 根据该值使用 apt 安装
 Ubuntu 和 ROS 2 依赖。
 
-<details>
-<summary>手动 apt 安装命令</summary>
-
-```bash
-sudo apt-get update
-sudo apt-get install -y \
-  build-essential cmake git libeigen3-dev libgtest-dev libyaml-cpp-dev \
-  python3-colcon-common-extensions \
-  ros-$ROS_DISTRO-ament-cmake ros-$ROS_DISTRO-ament-cmake-gtest \
-  ros-$ROS_DISTRO-ament-index-python \
-  ros-$ROS_DISTRO-diagnostic-msgs ros-$ROS_DISTRO-geometry-msgs \
-  ros-$ROS_DISTRO-launch ros-$ROS_DISTRO-launch-ros \
-  ros-$ROS_DISTRO-nav-msgs ros-$ROS_DISTRO-rclcpp \
-  ros-$ROS_DISTRO-rclcpp-components ros-$ROS_DISTRO-ros2launch \
-  ros-$ROS_DISTRO-rviz2 ros-$ROS_DISTRO-sensor-msgs \
-  ros-$ROS_DISTRO-std-msgs ros-$ROS_DISTRO-tf2 ros-$ROS_DISTRO-tf2-ros \
-  ros-$ROS_DISTRO-visualization-msgs
-```
-
-</details>
+apt 软件包的权威清单统一维护在
+[`install_deps.sh`](../install_deps.sh) 中，避免脚本、文档和 CI 说明发生漂移。
 
 OSQP v1.0.0、osqp-eigen v0.11.2 和 QDLDL v0.1.8 已包含在 `thirdparty/`
-目录中；构建过程不会联网下载求解器，也不会选择系统中的其他求解器版本。
+目录的 `neupan_solver_vendor` 功能包中；构建过程不会联网下载求解器，也不会选择
+系统中的其他求解器版本。
 
 ## 构建与运行
 
 ```bash
-./setup.sh
 ./build.sh
 source install/setup.bash
 ros2 launch neupan_sim quick_start.launch.py
 ```
 
-`setup.sh` 会检查 ROS 环境和原生依赖头文件。构建并运行完整测试：
+`build.sh` 会在构建前检查 ROS 发行版、原生依赖头文件和随仓库提供的求解器源码。
+构建并运行完整测试：
 
 ```bash
-./build.sh test
+./build.sh --test
 colcon test --event-handlers console_direct+
 colcon test-result --verbose
 ```
 
-如需单独构建某个功能包，将名称传给 `build.sh`，例如 `./build.sh neupan_ros` 或
-`./build.sh test neupan_core`。
+如需单独构建某个功能包，使用 `--package`，例如
+`./build.sh --package neupan_ros` 或 `./build.sh --test --package neupan_core`。
+原有的位置参数写法仍然兼容。
+
+### 集成到已有工作空间
+
+也可以将本仓库克隆到已有工作空间的源码目录：
+
+```bash
+cd ~/ros2_ws/src
+git clone https://github.com/KevinLADLee/neupan_ros2.git
+cd ..
+source /opt/ros/$ROS_DISTRO/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+```
+
+Colcon 会同时发现 `neupan_solver_vendor` 和三个第一方功能包，并按依赖顺序构建；
+无需运行仓库内的 setup 或第三方构建命令。
 
 ## 常见问题
 

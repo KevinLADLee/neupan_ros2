@@ -22,6 +22,7 @@ apt_packages=(
   libgtest-dev
   libyaml-cpp-dev
   python3-colcon-common-extensions
+  python3-tomli
   "ros-$ROS_DISTRO-ament-cmake"
   "ros-$ROS_DISTRO-ament-cmake-gtest"
   "ros-$ROS_DISTRO-ament-index-python"

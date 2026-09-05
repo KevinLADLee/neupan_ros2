@@ -24,50 +24,52 @@ source /opt/ros/$ROS_DISTRO/setup.bash
 Set `ROS_DISTRO` to `humble` or `jazzy`. `install_deps.sh` uses that value to
 install the required Ubuntu and ROS 2 packages with apt.
 
-<details>
-<summary>Manual apt command</summary>
-
-```bash
-sudo apt-get update
-sudo apt-get install -y \
-  build-essential cmake git libeigen3-dev libgtest-dev libyaml-cpp-dev \
-  python3-colcon-common-extensions \
-  ros-$ROS_DISTRO-ament-cmake ros-$ROS_DISTRO-ament-cmake-gtest \
-  ros-$ROS_DISTRO-ament-index-python \
-  ros-$ROS_DISTRO-diagnostic-msgs ros-$ROS_DISTRO-geometry-msgs \
-  ros-$ROS_DISTRO-launch ros-$ROS_DISTRO-launch-ros \
-  ros-$ROS_DISTRO-nav-msgs ros-$ROS_DISTRO-rclcpp \
-  ros-$ROS_DISTRO-rclcpp-components ros-$ROS_DISTRO-ros2launch \
-  ros-$ROS_DISTRO-rviz2 ros-$ROS_DISTRO-sensor-msgs \
-  ros-$ROS_DISTRO-std-msgs ros-$ROS_DISTRO-tf2 ros-$ROS_DISTRO-tf2-ros \
-  ros-$ROS_DISTRO-visualization-msgs
-```
-
-</details>
+The authoritative apt package list is maintained in
+[`install_deps.sh`](../install_deps.sh) to prevent the script, documentation,
+and CI instructions from drifting apart.
 
 OSQP v1.0.0, osqp-eigen v0.11.2, and QDLDL v0.1.8 are already included under
-`thirdparty/`; the build does not download or select a system solver.
+`thirdparty/` as the `neupan_solver_vendor` package; the build does not download
+or select a system solver.
 
 ## Build and run
 
 ```bash
-./setup.sh
 ./build.sh
 source install/setup.bash
 ros2 launch neupan_sim quick_start.launch.py
 ```
 
-`setup.sh` validates the sourced ROS environment and native headers. Build and
-run the test suite with:
+`build.sh` validates the ROS distribution, native headers, and bundled solver
+sources before building. Build and run the test suite with:
 
 ```bash
-./build.sh test
+./build.sh --test
 colcon test --event-handlers console_direct+
 colcon test-result --verbose
 ```
 
-For a package-specific build, pass its name to `build.sh`, for example
-`./build.sh neupan_ros` or `./build.sh test neupan_core`.
+For a package-specific build, use `--package`, for example
+`./build.sh --package neupan_ros` or
+`./build.sh --test --package neupan_core`. The former positional syntax remains
+supported for compatibility.
+
+### Use inside an existing workspace
+
+The repository can also be cloned below an existing source space:
+
+```bash
+cd ~/ros2_ws/src
+git clone https://github.com/KevinLADLee/neupan_ros2.git
+cd ..
+source /opt/ros/$ROS_DISTRO/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+```
+
+Colcon discovers `neupan_solver_vendor` together with the three first-party
+packages and builds them in dependency order. No repository-local setup or
+third-party build command is required.
 
 ## Troubleshooting
 

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,6 +7,7 @@ name = "neupan-training"
 version = "0.1.0"
 description = "Offline DUNE training and model export for neupan_core"
 requires-python = ">=3.10"
+license = "GPL-3.0-or-later"
 dependencies = [
   "colorama",
   "cvxpy",

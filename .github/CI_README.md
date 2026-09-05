@@ -19,11 +19,12 @@ resolution.
 Each matrix job:
 
 1. Installs the compiler, CMake, Eigen3, yaml-cpp, GTest, and colcon.
-2. Confirms the colcon source space contains exactly `neupan_core`, `neupan_ros`,
-   and `neupan_sim`.
+2. Confirms the colcon source space contains exactly `neupan_solver_vendor`,
+   `neupan_core`, `neupan_ros`, and `neupan_sim`.
 3. Builds the vendored solver and all three packages with tests enabled.
 4. Runs every package test and prints verbose results.
-5. Byte-compiles the offline training project and parses its `pyproject.toml`.
+5. Byte-compiles the offline training project and parses its `pyproject.toml`
+   with the Python 3.10-compatible `tomli` package.
 
 The solver sources are vendored under `thirdparty/`, so CI does not download
 OSQP, osqp-eigen, or QDLDL during the build.
@@ -35,9 +36,9 @@ then run:
 
 ```bash
 source /opt/ros/$ROS_DISTRO/setup.bash
-./build.sh test
+./build.sh --test
 colcon test --event-handlers console_direct+
 colcon test-result --verbose
 python3 -m compileall -q training/src
-python3 -c "import pathlib, tomllib; tomllib.loads(pathlib.Path('training/pyproject.toml').read_text())"
+python3 -c "import pathlib, tomli; tomli.loads(pathlib.Path('training/pyproject.toml').read_text())"
 ```

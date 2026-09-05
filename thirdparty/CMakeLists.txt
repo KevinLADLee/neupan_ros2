@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
-project(neupan_thirdparty LANGUAGES C CXX)
+project(neupan_solver_vendor VERSION 0.1.0 LANGUAGES C CXX)
+
+include(GNUInstallDirs)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
@@ -48,3 +50,16 @@ set(OSQP_EIGEN_DEBUG_OUTPUT OFF CACHE BOOL "Enable osqp-eigen debug output" FORC
 set(ENABLE_RPATH OFF CACHE BOOL "Enable osqp-eigen install RPATH" FORCE)
 
 add_subdirectory(osqp-eigen)
+
+# Preserve all notices required when the installed solver artifacts are
+# redistributed independently from this source tree.
+install(FILES osqp/LICENSE osqp/NOTICE
+        DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/osqp")
+install(FILES osqp-eigen/LICENSE
+        DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/osqp-eigen")
+install(FILES qdldl/LICENSE
+        DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/qdldl")
+install(FILES osqp/algebra/_common/lin_sys/qdldl/amd/LICENSE
+        DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/amd")
+install(FILES package.xml
+        DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}")

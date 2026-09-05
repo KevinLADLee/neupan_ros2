@@ -11,7 +11,7 @@ From the workspace root, build and run the core tests:
 
 ```bash
 source /opt/ros/$ROS_DISTRO/setup.bash
-./build.sh test neupan_core
+./build.sh --test --package neupan_core
 colcon test --packages-select neupan_core --event-handlers console_direct+
 colcon test-result --verbose
 ```

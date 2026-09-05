@@ -14,7 +14,7 @@
 <a href="https://docs.ros.org/en/humble/"><img src="https://img.shields.io/badge/ROS%202-Humble-blue" alt="ROS 2 Humble"></a>
 <a href="https://docs.ros.org/en/jazzy/"><img src="https://img.shields.io/badge/ROS%202-Jazzy-blue" alt="ROS 2 Jazzy"></a>
 <a href="https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml"><img src="https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml/badge.svg" alt="ROS 2 CI"></a>
-<a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-blue" alt="GPL v3 license"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later license"></a>
 
 [English](README.md) | [中文](README_CN.md)
 
@@ -43,7 +43,6 @@ Install ROS 2 Humble or Jazzy and clone the repository. Set `ROS_DISTRO` to
 ROS_DISTRO=humble
 source /opt/ros/$ROS_DISTRO/setup.bash
 ./install_deps.sh
-./setup.sh
 ./build.sh
 source install/setup.bash
 ros2 launch neupan_sim quick_start.launch.py
@@ -53,10 +52,11 @@ This starts the demonstration and RViz. Use `rviz:=false` for a headless run.
 See the [installation guide](docs/installation.md) for prerequisites and build
 options.
 
-## ROS 2 packages
+## Workspace packages
 
 | Package | Purpose | Documentation |
 | --- | --- | --- |
+| `neupan_solver_vendor` | Offline solver dependencies | [README](thirdparty/README.md) |
 | `neupan_core` | NeuPAN planning library | [README](src/neupan_core/README.md) |
 | `neupan_ros` | ROS 2 integration | [README](src/neupan_ros/README.md) |
 | `neupan_sim` | Simulation and verification | [README](src/neupan_sim/README.md) |
@@ -89,4 +89,10 @@ If NeuPAN is useful in your work, please cite the original paper:
 
 ## License
 
-[GNU General Public License v3.0](LICENSE).
+NeuPAN ROS 2 first-party code is licensed under the
+[GNU General Public License v3.0 or later](LICENSE). It ports or references
+GPL-3.0 projects including NeuPAN, NeuPAN-ROS, neupan_cpp, and DDR-opt.
+
+Bundled solver components retain their original Apache-2.0 and BSD-3-Clause
+terms. Versions, provenance, license files, and redistribution notices are
+listed in the [third-party dependency manifest](thirdparty/README.md).
