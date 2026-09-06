@@ -61,3 +61,13 @@ trapezoid minimum clearance 0.276 m, Scout 0.271 m, square 0.500 m. Every robot
 reported two peers and nonzero peer sensor hits. A separate default-launch smoke
 check verified RViz with OpenGL 4.6 and clean shutdown of all processes on Ctrl-C.
 These are observed outcomes, not a guarantee for every scheduling or scene.
+
+## Compact layout revision
+
+The default interactive scene now uses the compact trained trapezoid and a
+10 x 7 m world. The earlier `multi_robot_launch.json` records the larger original
+layout, not the current default. The [new run](multi_robot_layout.json) reached
+all three goals with minimum clearances of 0.278 m, 0.216 m, and 0.216 m.
+All robots sensed two peers; the single displayed moving obstacle was observed
+moving. The [actual RViz screenshot](multi_robot_layout.png) verifies matching
+footprint colors, upward polygon faces, non-overlapping status text and map fit.

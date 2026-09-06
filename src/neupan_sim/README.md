@@ -247,3 +247,22 @@ RViz shows all robot footprints, plans, laser scans (including other robots),
 static and moving obstacles, trajectories and result labels. Diagnostics remain
 available at `/<name>/neupan_sim/diagnostics`. As in the other shared scenarios,
 local avoidance may stall or time out in congested encounters.
+
+### Compact scene layout
+
+The interactive launch uses a 10 x 7 m world and robot footprints of 0.90 x 0.50 m
+(trapezoid), 0.612 x 0.580 m (Scout), and 0.50 x 0.50 m (square). The compact
+trapezoid uses `compact_polygon_diff.yaml` and its matching CUDA-trained
+`diff_compact_polygon.bin`; the original full-size polygon model remains available
+for the original validation suites. Its clearance settings match the small robots.
+
+Robot bodies, goals, plans and traces use consistent coral/blue/yellow colors.
+White arrows show body heading. Short three-line status labels sit above the map;
+the last line is elapsed seconds / minimum clearance in metres. Lasers can be
+expanded/enabled in each RViz group and are hidden initially. Shared world markers
+are drawn once. The map fits the default 1400 x 950 window with its display panel
+open. Polygon faces use upward winding, including for clockwise input vertices.
+
+Optional simulator display parameters: `marker_color: [r, g, b]` (0..1),
+`robot_label`, `status_position: [x, y]`, and `show_world`. They affect markers only;
+physical geometry is always derived from the planner configuration.

@@ -26,6 +26,10 @@ def launch_multi_robot(context):
     colors = ['255; 100; 80', '70; 170; 255', '255; 210; 60']
     for i, case in enumerate(cases):
         name = case['name']
+        rgb = [float(v) / 255.0 for v in colors[i % len(colors)].split(';')]
+        label = f"{name} | {case['robot']}"
+        case['simulator'].update(marker_color=rgb, robot_label=f"{name}:{case['robot']}", show_world=i == 0,
+                                 status_position=[(i - (len(cases)-1)/2) * 3.2, 4.05])
         planner_file = root / f'{name}.planner.yaml'
         simulator_file = root / f'{name}.sim.yaml'
         planner_file.write_text(yaml.safe_dump(case['planner']))
@@ -38,23 +42,25 @@ def launch_multi_robot(context):
                          'base_frame': case['simulator']['base_frame'],
                          'control_rate': 20.0, 'obstacle_source': 'pointcloud',
                          'pose_timeout': 1.0, 'pointcloud_timeout': 1.0}]))
-        displays.append({'Class': 'rviz_common/Group', 'Name': name, 'Enabled': True, 'Displays': [
+        displays.append({'Class': 'rviz_common/Group', 'Name': label, 'Enabled': True, 'Displays': [
             {'Class': 'rviz_default_plugins/MarkerArray', 'Name': 'World and robot', 'Enabled': True,
              'Topic': {'Value': f'/{name}/neupan_sim/markers', 'Depth': 5,
                        'Durability Policy': 'Transient Local', 'Reliability Policy': 'Reliable'}},
             {'Class': 'rviz_default_plugins/Path', 'Name': 'Plan', 'Enabled': True,
              'Color': colors[i % len(colors)], 'Line Style': 'Lines', 'Line Width': 0.04,
              'Topic': {'Value': f'/{name}/neupan_plan', 'Depth': 5}},
-            {'Class': 'rviz_default_plugins/LaserScan', 'Name': 'Lidar (includes peers)', 'Enabled': True,
+            {'Class': 'rviz_default_plugins/LaserScan', 'Name': 'Lidar (includes peers)', 'Enabled': False,
              'Size (m)': 0.025, 'Style': 'Points', 'Color Transformer': 'FlatColor',
              'Color': colors[i % len(colors)],
              'Topic': {'Value': f'/{name}/scan', 'Depth': 5, 'Reliability Policy': 'Reliable'}}]} )
     rviz_file = root / 'multi_robot.rviz'
-    rviz_file.write_text(yaml.safe_dump({'Visualization Manager': {
+    rviz_file.write_text(yaml.safe_dump({'Window Geometry': {'Width': 1400, 'Height': 950},
+        'Panels': [{'Class': 'rviz_common/Displays', 'Name': 'Displays'}],
+        'Visualization Manager': {
         'Global Options': {'Fixed Frame': cases[0]['simulator']['world_frame'],
                            'Background Color': '35; 35; 40'}, 'Displays': displays,
         'Views': {'Current': {'Class': 'rviz_default_plugins/TopDownOrtho',
-                              'Scale': 45, 'X': 0, 'Y': 0}}}}))
+                              'Scale': 75, 'X': 0, 'Y': 0.45}}}}))
     fleet = Node(package='neupan_sim', executable='neupan_fleet_sim', output='screen',
                  parameters=[{'robot_names': [c['name'] for c in cases], 'simulator_files': files}])
     starter = Node(package='neupan_sim', executable='neupan_start_fleet', output='screen',

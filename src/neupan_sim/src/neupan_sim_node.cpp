@@ -107,6 +107,17 @@ class NeupanSimNode final : public rclcpp::Node {
     if (world_frame_.empty() || base_frame_.empty() || laser_frame_.empty() ||
         world_frame_ == base_frame_ || world_frame_ == laser_frame_ || base_frame_ == laser_frame_)
       throw std::invalid_argument("simulator frame IDs must be nonempty and distinct");
+    const auto color = declare_parameter<std::vector<double>>("marker_color", {0.1, 0.8, 0.3});
+    status_position_ = declare_parameter<std::vector<double>>("status_position", std::vector<double>{});
+    robot_label_ = declare_parameter<std::string>("robot_label", "");
+    show_world_ = declare_parameter<bool>("show_world", true);
+    if (color.size() != 3 || std::any_of(color.begin(), color.end(), [](double x) {
+          return !std::isfinite(x) || x < 0.0 || x > 1.0;
+        }) || (!status_position_.empty() && (status_position_.size() != 2 ||
+          !std::isfinite(status_position_[0]) || !std::isfinite(status_position_[1]))))
+      throw std::invalid_argument("invalid marker color or status position");
+    marker_color_.r = color[0]; marker_color_.g = color[1]; marker_color_.b = color[2];
+    marker_color_.a = 1.0F;
     paused_ = declare_parameter<bool>("start_paused", false);
     start_service_ = create_service<std_srvs::srv::Trigger>(
         "start", [this](const std::shared_ptr<std_srvs::srv::Trigger::Request>,
@@ -512,92 +523,96 @@ class NeupanSimNode final : public rclcpp::Node {
 
   void publishMarkers(const rclcpp::Time& stamp) {
     visualization_msgs::msg::MarkerArray array;
-    int id = 0;
-    int velocity_id = 0;
-    for (const auto& obstacle : simulation_->circles()) {
-      auto item = marker(stamp, "circles", id++,
-                         visualization_msgs::msg::Marker::CYLINDER);
-      item.pose.position.x = obstacle.center.x;
-      item.pose.position.y = obstacle.center.y;
-      item.scale.x = item.scale.y = 2.0 * obstacle.radius;
-      item.scale.z = 0.4;
-      const bool dynamic =
-          std::hypot(obstacle.velocity.x, obstacle.velocity.y) > 1e-10;
-      item.color.r = dynamic ? 0.9F : 0.4F;
-      item.color.g = dynamic ? 0.2F : 0.4F;
-      item.color.b = dynamic ? 0.1F : 0.4F;
-      array.markers.push_back(std::move(item));
-      if (dynamic) {
-        auto velocity = marker(stamp, "obstacle_velocity", velocity_id++,
-                               visualization_msgs::msg::Marker::ARROW);
-        velocity.scale.x = 0.04;
-        velocity.scale.y = 0.09;
-        velocity.scale.z = 0.12;
-        velocity.color.r = 1.0F;
-        velocity.color.g = 0.6F;
-        geometry_msgs::msg::Point first;
-        first.x = obstacle.center.x;
-        first.y = obstacle.center.y;
-        geometry_msgs::msg::Point second = first;
-        second.x += obstacle.velocity.x;
-        second.y += obstacle.velocity.y;
-        velocity.points.push_back(first);
-        velocity.points.push_back(second);
-        array.markers.push_back(std::move(velocity));
-      }
-    }
-
-    auto floor = marker(stamp, "world", 0,
-                        visualization_msgs::msg::Marker::CUBE);
     const auto& cfg = simulation_->config();
-    floor.pose.position.x = 0.5 * (cfg.min_x + cfg.max_x);
-    floor.pose.position.y = 0.5 * (cfg.min_y + cfg.max_y);
-    floor.pose.position.z = -0.035;
-    floor.scale.x = cfg.max_x - cfg.min_x;
-    floor.scale.y = cfg.max_y - cfg.min_y;
-    floor.scale.z = 0.02;
-    floor.color.r = 0.12F;
-    floor.color.g = 0.14F;
-    floor.color.b = 0.17F;
-    floor.color.a = 0.65F;
-    array.markers.push_back(std::move(floor));
+    if (show_world_) {
+      int id = 0;
+      int velocity_id = 0;
+      for (const auto& obstacle : simulation_->circles()) {
+        auto item = marker(stamp, "circles", id++,
+                           visualization_msgs::msg::Marker::CYLINDER);
+        item.pose.position.x = obstacle.center.x;
+        item.pose.position.y = obstacle.center.y;
+        item.scale.x = item.scale.y = 2.0 * obstacle.radius;
+        item.scale.z = 0.4;
+        const bool dynamic =
+            std::hypot(obstacle.velocity.x, obstacle.velocity.y) > 1e-10;
+        item.color.r = dynamic ? 0.9F : 0.4F;
+        item.color.g = dynamic ? 0.2F : 0.4F;
+        item.color.b = dynamic ? 0.1F : 0.4F;
+        array.markers.push_back(std::move(item));
+        if (dynamic) {
+          auto velocity = marker(stamp, "obstacle_velocity", velocity_id++,
+                                 visualization_msgs::msg::Marker::ARROW);
+          velocity.scale.x = 0.04;
+          velocity.scale.y = 0.09;
+          velocity.scale.z = 0.12;
+          velocity.color.r = 1.0F;
+          velocity.color.g = 0.6F;
+          geometry_msgs::msg::Point first;
+          first.x = obstacle.center.x;
+          first.y = obstacle.center.y;
+          geometry_msgs::msg::Point second = first;
+          second.x += obstacle.velocity.x;
+          second.y += obstacle.velocity.y;
+          velocity.points.push_back(first);
+          velocity.points.push_back(second);
+          array.markers.push_back(std::move(velocity));
+        }
+      }
 
-    auto segments = marker(stamp, "segments", 0,
-                           visualization_msgs::msg::Marker::LINE_LIST);
-    segments.scale.x = 0.07;
-    segments.color.r = 0.55F;
-    segments.color.g = 0.58F;
-    segments.color.b = 0.62F;
-    for (const auto& segment : simulation_->segments()) {
-      geometry_msgs::msg::Point first;
-      first.x = segment.first.x;
-      first.y = segment.first.y;
-      geometry_msgs::msg::Point second;
-      second.x = segment.second.x;
-      second.y = segment.second.y;
-      segments.points.push_back(first);
-      segments.points.push_back(second);
-    }
-    array.markers.push_back(std::move(segments));
+      auto floor = marker(stamp, "world", 0,
+                          visualization_msgs::msg::Marker::CUBE);
+      floor.pose.position.x = 0.5 * (cfg.min_x + cfg.max_x);
+      floor.pose.position.y = 0.5 * (cfg.min_y + cfg.max_y);
+      floor.pose.position.z = -0.035;
+      floor.scale.x = cfg.max_x - cfg.min_x;
+      floor.scale.y = cfg.max_y - cfg.min_y;
+      floor.scale.z = 0.02;
+      floor.color.r = 0.12F;
+      floor.color.g = 0.14F;
+      floor.color.b = 0.17F;
+      floor.color.a = 0.65F;
+      array.markers.push_back(std::move(floor));
 
-    auto boundary = marker(stamp, "world", 1,
-                           visualization_msgs::msg::Marker::LINE_STRIP);
-    boundary.scale.x = 0.04;
-    boundary.color.b = 0.8F;
-    const std::array<Vec2, 5> boundary_points{{
-        {cfg.min_x, cfg.min_y},
-        {cfg.max_x, cfg.min_y},
-        {cfg.max_x, cfg.max_y},
-        {cfg.min_x, cfg.max_y},
-        {cfg.min_x, cfg.min_y},
-    }};
-    for (const Vec2 point : boundary_points) {
-      geometry_msgs::msg::Point output;
-      output.x = point.x;
-      output.y = point.y;
-      boundary.points.push_back(output);
+      auto segments = marker(stamp, "segments", 0,
+                             visualization_msgs::msg::Marker::LINE_LIST);
+      segments.scale.x = 0.07;
+      segments.color.r = 0.55F;
+      segments.color.g = 0.58F;
+      segments.color.b = 0.62F;
+      for (const auto& segment : simulation_->segments()) {
+        geometry_msgs::msg::Point first;
+        first.x = segment.first.x;
+        first.y = segment.first.y;
+        geometry_msgs::msg::Point second;
+        second.x = segment.second.x;
+        second.y = segment.second.y;
+        segments.points.push_back(first);
+        segments.points.push_back(second);
+      }
+      array.markers.push_back(std::move(segments));
+
+      auto boundary = marker(stamp, "world", 1,
+                             visualization_msgs::msg::Marker::LINE_STRIP);
+      boundary.scale.x = 0.04;
+      boundary.color.r = 0.35F;
+      boundary.color.g = 0.42F;
+      boundary.color.b = 0.50F;
+      const std::array<Vec2, 5> boundary_points{{
+          {cfg.min_x, cfg.min_y},
+          {cfg.max_x, cfg.min_y},
+          {cfg.max_x, cfg.max_y},
+          {cfg.min_x, cfg.max_y},
+          {cfg.min_x, cfg.min_y},
+      }};
+      for (const Vec2 point : boundary_points) {
+        geometry_msgs::msg::Point output;
+        output.x = point.x;
+        output.y = point.y;
+        boundary.points.push_back(output);
+      }
+      array.markers.push_back(std::move(boundary));
     }
-    array.markers.push_back(std::move(boundary));
 
     auto robot = marker(stamp, "robot", 0,
                         visualization_msgs::msg::Marker::CUBE);
@@ -607,36 +622,61 @@ class NeupanSimNode final : public rclcpp::Node {
     robot.scale.x = cfg.robot_length;
     robot.scale.y = cfg.robot_width;
     robot.scale.z = 0.2;
-    robot.color.g = 0.8F;
+    robot.color = marker_color_;
     if (!cfg.robot_vertices.empty()) {
       robot.type = visualization_msgs::msg::Marker::TRIANGLE_LIST;
       robot.scale.x = robot.scale.y = robot.scale.z = 1.0;
       for (std::size_t i = 1; i + 1 < cfg.robot_vertices.size(); ++i) {
-        for (const std::size_t j : {std::size_t(0), i, i + 1}) {
+        const auto& a = cfg.robot_vertices[0];
+        const auto& b = cfg.robot_vertices[i];
+        const auto& c = cfg.robot_vertices[i + 1];
+        const bool ccw = (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x) >= 0.0;
+        for (const std::size_t j : {std::size_t(0), ccw ? i : i + 1, ccw ? i + 1 : i}) {
           geometry_msgs::msg::Point point;
           point.x = cfg.robot_vertices[j].x;
           point.y = cfg.robot_vertices[j].y;
           point.z = 0.1;
           robot.points.push_back(point);
+          robot.colors.push_back(marker_color_);
         }
       }
     }
     array.markers.push_back(std::move(robot));
+
+    auto heading = marker(stamp, "heading", 0, visualization_msgs::msg::Marker::ARROW);
+    heading.pose.position.x = simulation_->pose().x;
+    heading.pose.position.y = simulation_->pose().y;
+    heading.pose.position.z = 0.13;
+    heading.pose.orientation = yawToQuaternion(simulation_->pose().yaw);
+    heading.scale.x = 0.30; heading.scale.y = 0.045; heading.scale.z = 0.055;
+    heading.color.r = heading.color.g = heading.color.b = 1.0F;
+    array.markers.push_back(std::move(heading));
+    if (!robot_label_.empty()) {
+      auto label = marker(stamp, "robot_label", 0, visualization_msgs::msg::Marker::TEXT_VIEW_FACING);
+      label.pose.position.x = simulation_->pose().x;
+      label.pose.position.y = simulation_->pose().y + 0.48;
+      label.pose.position.z = 0.2;
+      label.scale.z = 0.14;
+      label.color = marker_color_;
+      label.text = get_namespace();
+      if (!label.text.empty() && label.text.front() == '/') label.text.erase(0, 1);
+      array.markers.push_back(std::move(label));
+    }
 
     auto goal = marker(stamp, "goal", 0,
                        visualization_msgs::msg::Marker::SPHERE);
     goal.pose.position.x = simulation_->goal().x;
     goal.pose.position.y = simulation_->goal().y;
     goal.scale.x = goal.scale.y = goal.scale.z = 0.2;
-    goal.color.g = 0.8F;
-    goal.color.b = 0.8F;
+    goal.color = marker_color_;
+    goal.color.a = 0.45F;
     array.markers.push_back(std::move(goal));
 
     auto trace = marker(stamp, "trajectory", 0,
                         visualization_msgs::msg::Marker::LINE_STRIP);
     trace.scale.x = 0.03;
-    trace.color.g = 0.8F;
-    trace.color.b = 0.2F;
+    trace.color = marker_color_;
+    trace.color.a = 0.8F;
     for (const auto& point : trajectory_) {
       geometry_msgs::msg::Point output;
       output.x = point.x;
@@ -663,6 +703,16 @@ class NeupanSimNode final : public rclcpp::Node {
          << "  t=" << simulation_->elapsedTime() << "s"
          << "  goal=" << simulation_->goalDistance() << "m"
          << "  min_clearance=" << simulation_->minimumClearance() << "m";
+    if (!status_position_.empty()) {
+      status.pose.position.x = status_position_[0];
+      status.pose.position.y = status_position_[1];
+      status.scale.z = 0.18;
+      status.color = marker_color_;
+      text.str(""); text.clear();
+      text << robot_label_ << "\n" << neupan_sim::resultName(simulation_->result())
+           << "\n" << simulation_->elapsedTime() << "s/"
+           << simulation_->minimumClearance() << "m";
+    }
     status.text = text.str();
     array.markers.push_back(std::move(status));
     marker_pub_->publish(array);
@@ -673,6 +723,10 @@ class NeupanSimNode final : public rclcpp::Node {
   std::vector<Vec2> trajectory_;
   std::string scenario_name_;
   std::string world_frame_, base_frame_, laser_frame_;
+  std_msgs::msg::ColorRGBA marker_color_;
+  std::vector<double> status_position_;
+  std::string robot_label_;
+  bool show_world_ = true;
   bool paused_ = false;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_service_;
   Pose2 laser_pose_;

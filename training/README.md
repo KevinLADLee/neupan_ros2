@@ -221,3 +221,10 @@ PyTorch 2.11.0+cu128, one CPU thread, one warmup epoch and five timed epochs:
 | 4096 | 28 ms | 3,549,530 |
 
 These measurements exclude label generation, validation and artifact writing.
+
+The compact multi-robot demo trapezoid (0.90 x 0.50 m) is reproducible with
+`--config src/neupan_ros/config/compact_polygon_diff.yaml --output NEW_RUN`.
+Its supplied model was trained on CUDA with 40,000 samples and 1,500 epochs;
+8,000 held-out points gave 0.00308 m mean distance error and 0.03215 m maximum
+error. The export passed C++ parity verification (maximum distance difference
+0.00000202 m). Model metadata is in `diff_compact_polygon.bin.json`.

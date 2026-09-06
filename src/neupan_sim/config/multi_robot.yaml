@@ -1,4 +1,4 @@
-# Shared scene for validate_multi_robot.launch.py. Coordinates are in metres.
+# Shared scene: compact robots, 10 x 7 m world. All coordinates in metres.
 robots:
   square:
     planner: package://neupan_ros/config/sentry_diff.yaml
@@ -7,8 +7,8 @@ robots:
     planner: package://neupan_ros/config/scout_mini_diff.yaml
     checkpoint: package://neupan_ros/models/diff_scout_mini_612x580.bin
   trapezoid:
-    planner: package://neupan_ros/config/polygon_diff.yaml
-    checkpoint: package://neupan_ros/models/diff_polygon.bin
+    planner: package://neupan_ros/config/compact_polygon_diff.yaml
+    checkpoint: package://neupan_ros/models/diff_compact_polygon.bin
 planner_overrides:
   ref_speed: 0.6
   robot:
@@ -26,10 +26,10 @@ simulator:
   sensor_rate: 20.0
   diagnostics_rate: 10.0
   world_bounds:
-  - -7.0
-  - 7.0
-  - -7.0
-  - 7.0
+  - -5.0
+  - 5.0
+  - -3.5
+  - 3.5
   simulation_timeout: 40.0
   goal_tolerance: 0.15
   laser_pose:
@@ -39,55 +39,55 @@ simulator:
   scan_range_max: 8.0
   static_circles:
   - -1.5
-  - 2.4
-  - 0.35
-  - 3.0
-  - -2.5
+  - 1.1
+  - 0.3
+  - 2.8
+  - -2.0
   - 0.4
   dynamic_circles:
   - 2.0
-  - -2.0
+  - -1.5
   - 0.25
   - -0.35
   - 0.0
   segments:
-  - -5.5
-  - -5.0
-  - 5.5
-  - -5.0
+  - -3.8
+  - -3.3
+  - 3.8
+  - -3.3
 scenarios:
   obstacle_world:
     robots:
       alpha:
         profile: trapezoid
         initial_pose:
-        - -4.0
+        - -3.8
         - 0.0
         - 0.0
         path_waypoints:
-        - -4.0
+        - -3.8
         - 0.0
-        - 4.0
+        - 3.8
         - 0.0
       beta:
         profile: scout
         initial_pose:
         - 0.0
-        - -4.0
+        - -2.4
         - 1.5707963267948966
         path_waypoints:
         - 0.0
-        - -4.0
+        - -2.4
         - 0.0
-        - 4.0
+        - 2.5
       gamma:
         profile: square
         initial_pose:
-        - 4.0
-        - 3.5
+        - 3.8
+        - 2.0
         - 3.141592653589793
         path_waypoints:
-        - 4.0
-        - 3.5
-        - -4.0
-        - 3.5
+        - 3.8
+        - 2.0
+        - -3.8
+        - 2.0
