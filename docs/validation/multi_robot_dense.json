@@ -1,0 +1,57 @@
+{
+  "scene": "dense obstacle_world",
+  "static_circles": 11,
+  "segments": 5,
+  "dynamic_circles": 3,
+  "rviz_scale": 268.7435607910156,
+  "states": {
+    "alpha": {
+      "result": "goal_reached",
+      "paused": "false",
+      "elapsed_time": "19.065000",
+      "goal_distance": "0.148206",
+      "path_length": "8.997812",
+      "clearance": "0.478989",
+      "minimum_clearance": "0.270634",
+      "actual_linear_speed": "0.000000",
+      "actual_angular_speed": "0.000000",
+      "command_age": "0.000000",
+      "scan_hits": "350",
+      "peer_count": "2",
+      "peer_hits": "0",
+      "total_peer_hits": "5845"
+    },
+    "beta": {
+      "result": "goal_reached",
+      "paused": "false",
+      "elapsed_time": "9.505000",
+      "goal_distance": "0.149589",
+      "path_length": "4.760975",
+      "clearance": "0.207106",
+      "minimum_clearance": "0.139742",
+      "actual_linear_speed": "0.000000",
+      "actual_angular_speed": "0.000000",
+      "command_age": "0.000000",
+      "scan_hits": "361",
+      "peer_count": "2",
+      "peer_hits": "9",
+      "total_peer_hits": "10812"
+    },
+    "gamma": {
+      "result": "goal_reached",
+      "paused": "false",
+      "elapsed_time": "12.960000",
+      "goal_distance": "0.148533",
+      "path_length": "7.483430",
+      "clearance": "0.791952",
+      "minimum_clearance": "0.212978",
+      "actual_linear_speed": "0.000000",
+      "actual_angular_speed": "0.000000",
+      "command_age": "0.000000",
+      "scan_hits": "354",
+      "peer_count": "2",
+      "peer_hits": "14",
+      "total_peer_hits": "7323"
+    }
+  }
+}

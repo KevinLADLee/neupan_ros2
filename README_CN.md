@@ -59,6 +59,10 @@ ros2 launch neupan_sim quick_start.launch.py
 | `neupan_ros` | ROS 2 集成 | [README](src/neupan_ros/README.md) |
 | `neupan_sim` | 仿真与验证 | [README](src/neupan_sim/README.md) |
 
+多台实际机器人在同一个 ROS domain 中独立运行时，请参阅
+[分布式多机器人部署](docs/distributed_multi_robot_CN.md)。文档给出了通用的单机器人
+launch，以及按 `robot_id` 固定 namespace、TF frame、模型和驱动话题的包装 launch。
+
 工作空间结构见 [src/README.md](src/README.md)，离线模型训练见
 [`training/README.md`](training/README.md)。
 [Scout Mini Diff 示例](examples/scout_mini_diff/README.md) 提供 612 mm × 580 mm

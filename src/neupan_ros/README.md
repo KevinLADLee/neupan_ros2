@@ -1,5 +1,20 @@
 # neupan_ros
 
+Differential-drive robots support rectangles and single convex polygons via
+`robot.vertices` in the planner YAML; see [polygon_diff.yaml](config/polygon_diff.yaml).
+Use the same geometry for [DUNE training](../../training/README.md), and supply
+the resulting model via `dune_checkpoint`. RViz `robot_marker` displays the
+actual polygon in the robot state frame, including asymmetric footprints.
+Omni/Ackermann kinematics and compound or concave robot shapes are not supported.
+
+After training, launch with explicit geometry and matching weights:
+
+```bash
+ros2 launch neupan_ros neupan.launch.py \
+  config_file:=$PWD/src/neupan_ros/config/polygon_diff.yaml \
+  dune_checkpoint:=$PWD/training/runs/polygon/model.bin
+```
+
 `neupan_ros` is an `ament_cmake` package that exposes `neupan_core` through ROS
 2. It installs the `neupan_node` local planner, a small `astar_global_node` used
 by the example launch file, configuration files, and a composable node.
@@ -7,6 +22,14 @@ It is tested with ROS 2 Humble and Jazzy.
 
 All topic names documented below are relative names and support ROS 2 namespace
 and remapping rules.
+
+For a distributed fleet, run one independent launch on each robot and use the
+robot ID as both its ROS namespace and TF frame prefix. The robots share a
+`ROS_DOMAIN_ID`; no fleet simulator or central launcher is involved. The
+[Chinese distributed deployment guide](../../docs/distributed_multi_robot_CN.md)
+provides a reusable `neupan_robot.launch.py`, per-robot `robot_01.launch.py` and
+`robot_02.launch.py` wrappers, topic remapping, TF requirements, and peer
+obstacle-input options.
 
 ## Quick start
 

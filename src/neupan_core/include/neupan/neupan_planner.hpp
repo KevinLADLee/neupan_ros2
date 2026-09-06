@@ -39,12 +39,13 @@ class NeuPANPlanner {
     double ref_speed = 4.0;
     double collision_threshold = 0.1;
 
-    // robot (diff rectangle)
+    // Diff robot: explicit body-frame polygon takes precedence over dimensions.
     Vec2 max_speed{8.0, 1.0};
     Vec2 max_acce{8.0, 3.0};
     double length = 1.6;
     double width = 2.0;
     double wheelbase = 0.0;
+    Mat2X vertices{2, 0};  // empty selects the length/width rectangle
 
     InitialPath::Options ipath;
     PAN::Options pan;

@@ -1,5 +1,14 @@
 # neupan_sim
 
+For a convex polygon robot, set the ROS parameter `robot_vertices` to the flat
+list `[x1, y1, x2, y2, ...]` in metres in the robot state frame. For example, the
+planner's trapezoid `robot.vertices` corresponds to
+`[-0.8, -1.0, -1.8, 1.0, 1.8, 1.0, 0.8, -1.0]`. Use the same ordered vertices
+in the planner and simulator. Nonempty vertices override `robot_size`; the
+default empty list keeps the existing rectangular robot. Collision checks
+against circles, segments and world bounds, and the robot marker, use this
+polygon. This changes geometry only; the simulated motion remains differential drive.
+
 `neupan_sim` is an `ament_cmake` package for closed-loop NeuPAN demonstrations
 and integration tests. It provides a deterministic differential-drive simulator
 with continuous collision geometry; it is not a general-purpose robotics
@@ -124,3 +133,155 @@ LaserScan hit count.
 All scenario geometry uses `map`, while sensor messages use `laser_link`. See
 the [coordinate-frame contract](../../docs/coordinate_frames.md) and
 [dynamic-obstacle message contract](../../docs/dynamic_obstacles_CN.md).
+
+## Parallel shape validation
+
+Run the shape × scenario matrix with a single command (a nonzero exit means
+at least one unexpected result or an infrastructure failure):
+
+```bash
+ros2 run neupan_sim neupan_validate --output /tmp/neupan-validation-1
+# Optional single RViz, with scene copies laid out in a grid:
+ros2 run neupan_sim neupan_validate --output /tmp/neupan-validation-2 --rviz
+# Launch equivalent:
+ros2 launch neupan_sim validation.launch.py output:=/tmp/neupan-validation-3 rviz:=true
+```
+
+The default [suite](config/validation.yaml) covers square, Scout Mini rectangle,
+and the original NeuPAN trapezoid in open, static-obstacle, corridor, and moving
+obstacle scenes (12 cases). Each case owns its planner/model, simulated robot,
+topics, and TF frames. Geometry and actuator limits are derived from the planner
+configuration, including rectangle axle offsets. Copies do not sense or collide
+with each other. Display-only static transforms place their maps under
+`validation_world` without changing their local physics.
+
+Simulators start paused and continue publishing stationary TF, sensors and paths.
+The supervisor waits for every planner to report a successful solve, then calls
+each simulator's `start` Trigger service. The default standalone simulator still
+starts immediately. `world_frame`, `base_frame`, `laser_frame`, and `start_paused`
+are optional simulator parameters; defaults preserve the original single-robot
+launches.
+
+Use `--suite FILE` for another matrix or repeat `--case square_open` to select
+specific cases. Profiles reference planner/model files relative to the suite,
+or via `package://PACKAGE/path`. The trapezoid checkpoint is exported from
+upstream `example/model/polygon_robot/model_5000.pth`; its provenance and numerical
+verification are recorded in `neupan_core/models/diff_polygon.bin.json`.
+
+The output directory contains resolved per-case YAMLs, child process logs,
+`validation.rviz`, `summary.json`, and `summary.csv`. Existing results are never
+overwritten. Summary rows contain the terminal result, elapsed simulated time,
+path length, goal distance, minimum exact geometric clearance and the number of
+unsolved diagnostic samples. These samples are not unique solver-failure events.
+The supervisor stops all children on completion, startup failure, interruption,
+or wall-clock timeout. Concurrent CPU load can affect ROS scheduling; simulated
+time and trajectory metrics should be compared separately from wall time.
+
+## Shared-world multi-robot validation
+
+Run two differential-drive robots with different footprints in one world:
+
+```bash
+ros2 run neupan_sim neupan_validate --shared \
+  --suite "$(ros2 pkg prefix --share neupan_sim)/config/shared_validation.yaml" \
+  --scenario crossing --output /tmp/neupan-shared-crossing --rviz
+```
+
+Or use `ros2 launch neupan_sim shared_validation.launch.py
+scenario:=crossing output:=/tmp/neupan-shared-crossing`. The suite also contains
+`head_on` (symmetric encounter) and `mixed_three` (trapezoid, Scout rectangle,
+square). Select one scenario per run; every member participates. Use the runner
+command directly when its success/failure exit code is needed in CI.
+
+Each robot has its own planner, commands, path, sensors and diagnostics under
+`/<name>/`. They share `shared_map`; `/<name>/base_link` and
+`/<name>/laser_link` are unique TF frames. `neupan_fleet_sim` owns all bodies in a
+single executor and advances them with one timer, after every start service has
+been called. At each physics substep all bodies move before contacts are tested.
+The dynamic circle environment advances once, including after a robot parks.
+
+Laser rays see the nearest world surface or other robot polygon (self excluded).
+The point cloud carries world-object velocities expressed in the sensor frame,
+including the angular contribution at each hit. NeuPAN consumes these points
+through its existing dynamic-obstacle interface. Polygon-to-polygon contact,
+containment and clearance are checked independently of the learned model.
+Stopped/arrived robots remain visible and collidable. A later contact changes an
+arrived robot's outcome to collision. `peer_count` and `total_peer_hits` in the
+JSON/CSV report confirm the sensing connection.
+
+This is decentralized local avoidance; it does not add a fleet priority or
+reservation planner. Symmetric deadlocks, timeouts and collisions remain failures
+and are recorded, rather than hidden by the harness. Exact repeated trajectories
+are not guaranteed because planner commands arrive over wall-clock ROS scheduling.
+The shared simulator's integration and contact order are deterministic for the
+same command sequence.
+
+To add a robot, define its planner YAML and matching DUNE model under `robots`,
+then add a named scenario member with `profile`, `initial_pose`, and
+`path_waypoints`. Optional `planner_overrides` can set its reference speed.
+Environment bounds, circles, segments and physics rate belong to the common
+`simulator` mapping. Fleet startup rejects inconsistent world parameters and
+reused robot TF frames. Shapes are single convex polygons; convex unions such as
+two circles or a concave T remain outside this implementation. Kinematics remain
+differential drive.
+
+## Interactive multi-robot launch
+
+```bash
+ros2 launch neupan_sim validate_multi_robot.launch.py
+```
+
+This is the complete scene entry point: one `neupan_fleet_sim`, three native
+NeuPAN planners (trapezoid `alpha`, Scout rectangle `beta`, square `gamma`), and
+RViz. It loads `config/multi_robot.yaml`, containing eleven static circles, five
+wall segments and three moving circles. All bodies and obstacles share one world.
+The launch directly owns the ROS processes. A small startup node waits for all
+planners, then releases the simulation's common start barrier and exits.
+The simulator, planners and RViz stay open after the run for inspection; Ctrl-C
+stops the scene. A simulator/planner exit shuts down the remaining processes.
+
+Use `rviz:=false` for a headless run or `config:=/absolute/path/to/scene.yaml`
+for another suite using the same schema. `scenario:=obstacle_world` is the
+default. No output directory or separate validation command is required.
+RViz shows all robot footprints, plans, laser scans (including other robots),
+static and moving obstacles, trajectories and result labels. Diagnostics remain
+available at `/<name>/neupan_sim/diagnostics`. As in the other shared scenarios,
+local avoidance may stall or time out in congested encounters.
+
+### Compact scene layout
+
+The interactive launch uses a 10 x 7 m world and robot footprints of 0.90 x 0.50 m
+(trapezoid), 0.612 x 0.580 m (Scout), and 0.50 x 0.50 m (square). The compact
+trapezoid uses `compact_polygon_diff.yaml` and its matching CUDA-trained
+`diff_compact_polygon.bin`; the original full-size polygon model remains available
+for the original validation suites. Its clearance settings match the small robots.
+
+Robot bodies, goals, plans and traces use consistent coral/blue/yellow colors.
+White arrows show body heading. Short three-line status labels sit above the map;
+the last line is elapsed seconds / minimum clearance in metres. Lasers can be
+expanded/enabled in each RViz group and are hidden initially. Shared world markers
+are drawn once. The view and window geometry are loaded from the persistent
+`rviz/multi_robot.rviz` configuration, including the saved user zoom. Polygon faces use upward winding, including for clockwise input vertices.
+
+Optional simulator display parameters: `marker_color: [r, g, b]` (0..1),
+`robot_label`, `status_position: [x, y]`, and `show_world`. They affect markers only;
+physical geometry is always derived from the planner configuration.
+
+
+### Dense obstacle world and persistent RViz preferences
+
+The default world combines four corner obstacle clusters, two central slalom
+posts, a 1.55 m passage between wall segments, and three moving circles on two
+horizontal routes and one vertical route. Alpha follows intermediate waypoints
+around the posts, beta crosses the passage, and gamma traverses the upper lane.
+Moving routes clear every static circle and wall; the minimum route clearances
+are 0.48 m, 0.16 m and 0.05 m. Dynamic obstacles remain scripted bodies and do not
+negotiate with one another. The simulation limit is 60 s.
+
+The launch now loads the checked-in `rviz/multi_robot.rviz` directly, rather than
+creating a fresh temporary RViz file on every run. The user's saved camera scale
+268.7435607910156, window dimensions, dock arrangement and display settings were
+preserved. RViz Save can retain subsequent adjustments in that configuration;
+to use a separate saved preset, pass `rviz_config:=/absolute/path/to/custom.rviz`.
+When using custom robot names, update the topic groups in that preset as well.
+Headless verification uses `rviz:=false` and does not touch an open RViz session.

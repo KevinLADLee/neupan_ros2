@@ -8,7 +8,8 @@ import torch
 import yaml
 
 from .artifacts import load_checkpoint, select_device
-from .export import export, rectangle_gh
+from .export import export
+from .geometry import normalize_robot, robot_gh
 from .model import ObsPointNet
 from .run import validate_config
 from .trainer import DUNETrain
@@ -63,11 +64,12 @@ def parse_options(argv=None):
             value = getattr(args, name)
             if value is not None:
                 robot[name] = value
-        if "length" not in robot or "width" not in robot:
-            raise ValueError("Robot length and width are required via --config, flags, or --resume")
-        robot = {key: float(robot.get(key, 0)) for key in ("length", "width", "wheelbase")}
-        if not np.isfinite(list(robot.values())).all() or robot["length"] <= 0 or robot["width"] <= 0:
-            raise ValueError("Robot dimensions must be finite, with positive length and width")
+        if robot.get("vertices") is not None and any(
+                getattr(args, key) is not None for key in ("length", "width", "wheelbase")):
+            raise ValueError("Dimension flags cannot override robot.vertices; edit the vertices instead")
+        robot = normalize_robot(robot)
+        if "vertices" in robot and config["label_method"] == "rectangle":
+            raise ValueError("Use label_method: ecos for robot.vertices")
         if args.threads < 1:
             raise ValueError("--threads must be at least 1")
         args.device = args.device or configured_device
@@ -86,7 +88,7 @@ def main():
     torch.set_num_threads(args.threads)
     torch.manual_seed(config["seed"])
     np.random.seed(config["seed"])
-    g, h = rectangle_gh(**robot)
+    g, h = robot_gh(robot)
     model = ObsPointNet(2, len(g)).to(device)
     trainer = DUNETrain(model, torch.from_numpy(g), torch.from_numpy(h), str(args.output))
     best = trainer.start(**config, cache_dir=None if args.no_cache else args.cache_dir,

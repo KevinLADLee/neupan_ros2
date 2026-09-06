@@ -50,7 +50,7 @@ target_compile_options(neupan PRIVATE -O3)
 if(BUILD_TESTING)
   find_package(GTest REQUIRED)
 
-  foreach(t test_dune test_nrmp test_equivalence test_replay)
+  foreach(t test_dune test_nrmp test_equivalence test_replay test_robot)
     add_executable(${t} tests/${t}.cpp)
     target_link_libraries(${t} PRIVATE neupan GTest::gtest GTest::gtest_main)
     target_compile_definitions(${t} PRIVATE

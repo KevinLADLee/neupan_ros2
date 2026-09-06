@@ -31,7 +31,7 @@ void checkCheckpointGeometry(const std::string& path, const TensorFile& tf,
     std::fprintf(stderr,
                  "[neupan] WARNING: %s carries no footprint metadata, so it "
                  "cannot be checked against the configured robot. Re-export "
-                 "with tools/export_dune_weights.py to enable the check.\n",
+                 "with neupan-export --config ROBOT.yaml to enable the check.\n",
                  path.c_str());
     return;
   }
@@ -46,7 +46,7 @@ void checkCheckpointGeometry(const std::string& path, const TensorFile& tf,
         "dune: " + path +
         " was trained for a different robot footprint than the one "
         "configured; distances would be wrong. Retrain or fix robot "
-        "length/width in the planner yaml.");
+        "vertices or length/width/wheelbase in the planner yaml.");
 }
 
 }  // namespace

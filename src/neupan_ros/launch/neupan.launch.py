@@ -21,8 +21,8 @@ def generate_launch_description():
         name='neupan_node',
         output='screen',
         parameters=[{
-            'config_file': default_config,
-            'dune_checkpoint': default_model,
+            'config_file': LaunchConfiguration('config_file'),
+            'dune_checkpoint': LaunchConfiguration('dune_checkpoint'),
             'planning_frame': planning_frame,
             'base_frame': base_frame,
             'pose_timeout': ParameterValue(
@@ -42,6 +42,12 @@ def generate_launch_description():
     )
 
     ld = LaunchDescription()
+    ld.add_action(DeclareLaunchArgument(
+        'config_file', default_value=default_config,
+        description='Planner YAML, including robot geometry.'))
+    ld.add_action(DeclareLaunchArgument(
+        'dune_checkpoint', default_value=default_model,
+        description='DUNE model trained for the configured robot geometry.'))
     ld.add_action(DeclareLaunchArgument(
         'planning_frame', default_value='odom',
         description='Continuous reference frame used by local NeuPAN planning.'))

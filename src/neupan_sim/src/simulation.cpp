@@ -99,8 +99,56 @@ std::vector<Vec2> robotCorners(const Pose2& pose, double length, double width) {
 }
 
 std::vector<SegmentObstacle> robotEdges(const std::vector<Vec2>& corners) {
-  return {{corners[0], corners[1]}, {corners[1], corners[2]},
-          {corners[2], corners[3]}, {corners[3], corners[0]}};
+  std::vector<SegmentObstacle> edges;
+  for (std::size_t i = 0; i < corners.size(); ++i)
+    edges.push_back({corners[i], corners[(i + 1) % corners.size()]});
+  return edges;
+}
+
+bool pointInsidePolygon(const std::vector<Vec2>& vertices, const Vec2& point) {
+  bool positive = false, negative = false;
+  for (const auto& edge : robotEdges(vertices)) {
+    const double side = cross(subtract(edge.second, edge.first),
+                              subtract(point, edge.first));
+    positive |= side > kEpsilon;
+    negative |= side < -kEpsilon;
+  }
+  return !(positive && negative);
+}
+
+void validatePolygon(const std::vector<Vec2>& vertices) {
+  if (vertices.size() < 3)
+    throw std::invalid_argument("robot_vertices requires >= 3 vertices");
+  double min_x = vertices[0].x, max_x = min_x;
+  double min_y = vertices[0].y, max_y = min_y;
+  for (const auto& v : vertices) {
+    if (!std::isfinite(v.x) || !std::isfinite(v.y))
+      throw std::invalid_argument("robot_vertices must be finite");
+    min_x = std::min(min_x, v.x); max_x = std::max(max_x, v.x);
+    min_y = std::min(min_y, v.y); max_y = std::max(max_y, v.y);
+  }
+  const double scale = std::max(max_x - min_x, max_y - min_y);
+  if (!std::isfinite(scale) || scale <= 0.0)
+    throw std::invalid_argument("degenerate robot polygon");
+  std::vector<Vec2> local;
+  for (const auto& v : vertices)
+    local.push_back({(v.x - vertices[0].x) / scale,
+                     (v.y - vertices[0].y) / scale});
+  double area = 0.0;
+  for (std::size_t i = 0; i < local.size(); ++i) {
+    area += cross(local[i], local[(i + 1) % local.size()]);
+    for (std::size_t j = i + 1; j < local.size(); ++j)
+      if (norm(subtract(local[i], local[j])) <= 1e-12)
+        throw std::invalid_argument("repeated robot polygon vertex");
+  }
+  if (std::abs(area) <= 1e-12)
+    throw std::invalid_argument("robot polygon has zero area");
+  const double direction = area > 0.0 ? 1.0 : -1.0;
+  for (const auto& edge : robotEdges(local))
+    for (const auto& point : local)
+      if (direction * cross(subtract(edge.second, edge.first),
+                             subtract(point, edge.first)) < -1e-12)
+        throw std::invalid_argument("robot polygon is not convex and ordered");
 }
 
 bool pointInsideRobot(const Pose2& pose, double length, double width,
@@ -213,8 +261,10 @@ Simulation::Simulation(SimulationConfig config, Pose2 initial_pose, Vec2 goal,
 }
 
 void Simulation::validate() const {
+  if (!config_.robot_vertices.empty()) validatePolygon(config_.robot_vertices);
   if (config_.min_x >= config_.max_x || config_.min_y >= config_.max_y ||
-      config_.robot_length <= 0.0 || config_.robot_width <= 0.0 ||
+      (config_.robot_vertices.empty() &&
+       (config_.robot_length <= 0.0 || config_.robot_width <= 0.0)) ||
       config_.max_linear_speed <= 0.0 || config_.max_angular_speed <= 0.0 ||
       config_.max_linear_acceleration <= 0.0 ||
       config_.max_angular_acceleration <= 0.0 ||
@@ -318,20 +368,41 @@ double Simulation::goalDistance() const {
 
 double Simulation::clearance() const {
   double best = std::numeric_limits<double>::infinity();
+  const bool polygon = !config_.robot_vertices.empty();
+  auto corners = robotCorners(pose_, config_.robot_length, config_.robot_width);
+  if (polygon) {
+    corners.clear();
+    for (const auto& v : config_.robot_vertices)
+      corners.push_back(bodyToWorld(pose_, v));
+  }
+  const auto edges = robotEdges(corners);
+  for (const auto& peer : peers_) {
+    if (pointInsidePolygon(corners, peer.vertices.front()) ||
+        pointInsidePolygon(peer.vertices, corners.front())) return 0.0;
+    for (const auto& edge : edges)
+      for (const auto& other : robotEdges(peer.vertices))
+        best = std::min(best, segmentDistance(edge, other));
+  }
   for (const auto& circle : circles_) {
-    best = std::min(best, orientedBoxCircleClearance(
+    if (polygon) {
+      double distance = std::numeric_limits<double>::infinity();
+      for (const auto& edge : edges)
+        distance = std::min(distance, pointSegmentDistance(circle.center, edge));
+      if (pointInsidePolygon(corners, circle.center)) distance = -distance;
+      best = std::min(best, distance - circle.radius);
+    } else {
+      best = std::min(best, orientedBoxCircleClearance(
                               pose_, config_.robot_length, config_.robot_width,
                               circle));
+    }
   }
-
-  const auto corners =
-      robotCorners(pose_, config_.robot_length, config_.robot_width);
-  const auto edges = robotEdges(corners);
   for (const auto& segment : segments_) {
-    if (pointInsideRobot(pose_, config_.robot_length, config_.robot_width,
-                         segment.first) ||
-        pointInsideRobot(pose_, config_.robot_length, config_.robot_width,
-                         segment.second)) {
+    const auto inside = [&](const Vec2& point) {
+      return polygon ? pointInsidePolygon(corners, point)
+                     : pointInsideRobot(pose_, config_.robot_length,
+                                        config_.robot_width, point);
+    };
+    if (inside(segment.first) || inside(segment.second)) {
       return 0.0;
     }
     for (const auto& edge : edges)
@@ -356,7 +427,7 @@ RayHit Simulation::raycast(const Pose2& sensor_pose, double local_angle,
   const Vec2 direction{std::cos(angle), std::sin(angle)};
   RayHit best;
 
-  auto consider = [&](double distance, Vec2 velocity, bool dynamic) {
+  auto consider = [&](double distance, Vec2 velocity, bool dynamic, bool peer = false) {
     if (distance < best.range && distance <= range_max) {
       best.hit = true;
       best.range = std::max(distance, range_min);
@@ -364,6 +435,7 @@ RayHit Simulation::raycast(const Pose2& sensor_pose, double local_angle,
                     origin.y + best.range * direction.y};
       best.velocity = velocity;
       best.dynamic = dynamic;
+      best.peer = peer;
     }
   };
 
@@ -374,6 +446,19 @@ RayHit Simulation::raycast(const Pose2& sensor_pose, double local_angle,
   for (const auto& segment : segments_)
     consider(raySegment(origin, direction, segment), {}, false);
 
+  for (const auto& peer : peers_) {
+    for (const auto& edge : robotEdges(peer.vertices)) {
+      const double distance = raySegment(origin, direction, edge);
+      if (!std::isfinite(distance)) continue;
+      const Vec2 offset{origin.x + distance * direction.x - peer.pose.x,
+                        origin.y + distance * direction.y - peer.pose.y};
+      const Vec2 velocity{
+          peer.velocity.linear * std::cos(peer.pose.yaw) - peer.velocity.angular * offset.y,
+          peer.velocity.linear * std::sin(peer.pose.yaw) + peer.velocity.angular * offset.x};
+      consider(distance, velocity, std::hypot(velocity.x, velocity.y) > kEpsilon, true);
+    }
+  }
+
   const SegmentObstacle boundaries[] = {
       {{config_.min_x, config_.min_y}, {config_.max_x, config_.min_y}},
       {{config_.max_x, config_.min_y}, {config_.max_x, config_.max_y}},
@@ -382,6 +467,70 @@ RayHit Simulation::raycast(const Pose2& sensor_pose, double local_angle,
   for (const auto& boundary : boundaries)
     consider(raySegment(origin, direction, boundary), {}, false);
   return best;
+}
+
+std::vector<Vec2> Simulation::worldVertices() const {
+  if (config_.robot_vertices.empty())
+    return robotCorners(pose_, config_.robot_length, config_.robot_width);
+  std::vector<Vec2> vertices;
+  for (const auto& vertex : config_.robot_vertices)
+    vertices.push_back(bodyToWorld(pose_, vertex));
+  return vertices;
+}
+
+void Simulation::evaluateResult() {
+  const double distance = clearance();
+  minimum_clearance_ = std::min(minimum_clearance_, distance);
+  // Parked bodies remain collidable, including after reaching their goal.
+  if (distance <= 0.0) result_ = Result::Collision;
+  else if (result_ == Result::Running) {
+    if (goalDistance() <= config_.goal_tolerance) result_ = Result::GoalReached;
+    else if (elapsed_time_ >= config_.simulation_timeout) result_ = Result::TimedOut;
+  }
+  if (result_ != Result::Running) velocity_ = {};
+}
+
+void Simulation::synchronizeRobots(const std::vector<Simulation*>& robots) {
+  for (std::size_t i = 0; i < robots.size(); ++i) {
+    if (!robots[i] || std::find(robots.begin(), robots.begin() + i, robots[i]) != robots.begin() + i)
+      throw std::invalid_argument("fleet requires distinct, non-null simulations");
+  }
+  for (auto* robot : robots) {
+    robot->peers_.clear();
+    for (const auto* peer : robots)
+      if (peer != robot)
+        robot->peers_.push_back({peer->pose_, peer->velocity_, peer->worldVertices()});
+  }
+  for (auto* robot : robots) robot->evaluateResult();
+  // Contact/arrival can stop a body; sensor snapshots must carry its new velocity.
+  for (auto* robot : robots) {
+    std::size_t i = 0;
+    for (const auto* peer : robots)
+      if (peer != robot) robot->peers_[i++].velocity = peer->velocity_;
+  }
+}
+
+void Simulation::stepTogether(const std::vector<Simulation*>& robots, double dt) {
+  if (!(dt > 0.0) || !std::isfinite(dt))
+    throw std::invalid_argument("simulation step must be finite and positive");
+  synchronizeRobots(robots);
+  if (robots.empty()) return;
+  int substeps = 1;
+  for (const auto* robot : robots)
+    substeps = std::max(substeps, robot->config_.integration_substeps);
+  const double substep = dt / substeps;
+  for (int i = 0; i < substeps; ++i) {
+    // The shared environment continues even when its first robot has stopped.
+    robots.front()->integrateObstacles(substep);
+    for (auto* robot : robots) {
+      if (robot != robots.front()) robot->circles_ = robots.front()->circles_;
+      if (robot->result_ != Result::Running) continue;
+      robot->elapsed_time_ += substep;
+      robot->command_age_ += substep;
+      robot->integrateRobot(substep);
+    }
+    synchronizeRobots(robots);
+  }
 }
 
 }  // namespace neupan_sim

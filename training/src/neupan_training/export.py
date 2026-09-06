@@ -5,7 +5,7 @@ neupan_core's MLP::load.
 Usage:
     neupan-export <best.pt> <out.bin>
 
-length/width: the trained footprint; neupan_core refuses a mismatched robot.
+Geometry comes from a bound checkpoint or explicit legacy robot configuration.
 
 Part of neupan_cpp, a C++ port of NeuPAN (Copyright (c) 2025 Ruihua Han),
 distributed under the GNU General Public License v3 or later.
@@ -20,45 +20,32 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
+import yaml
 
 from .model import ObsPointNet
+from .geometry import rectangle_gh, polygon_gh, normalize_robot
 from .nptf import write_nptf
 from .artifacts import load_checkpoint, write_json
 
 
-def rectangle_gh(length: float, width: float, wheelbase: float = 0.0):
-    """G, h of a rectangle footprint; keep in step with Robot::diffRectangle."""
-    sx = -(length - wheelbase) / 2.0
-    sy = -width / 2.0
-    v = np.array([[sx, sy],
-                  [sx + length, sy],
-                  [sx + length, sy + width],
-                  [sx, sy + width]], dtype=np.float64)
-
-    n = len(v)
-    G = np.zeros((n, 2), dtype=np.float64)
-    h = np.zeros((n, 1), dtype=np.float64)
-    for i in range(n):
-        pre, nxt = v[i], v[(i + 1) % n]
-        diff = nxt - pre
-        G[i] = (diff[1], -diff[0])
-        h[i] = G[i, 0] * pre[0] + G[i, 1] * pre[1]
-    return G, h
-
-
 def export(checkpoint: str, out_path: str, length=None, width=None,
-           wheelbase=None, edge_dim=None, verify_with=None):
-    """Export geometry bound to training; explicit dimensions only for legacy weights."""
+           wheelbase=None, edge_dim=None, verify_with=None, vertices=None):
+    """Export bound geometry, or explicitly describe/check the trained footprint."""
     saved = torch.load(checkpoint, map_location="cpu", weights_only=True)
     metadata = {}
+    requested_geometry = None
+    if vertices is not None:
+        requested_geometry = polygon_gh(vertices)
+    elif any(value is not None for value in (length, width, wheelbase)):
+        if length is None or width is None:
+            raise ValueError("Supply both length and width when checking geometry overrides")
+        requested_geometry = rectangle_gh(length, width, wheelbase or 0.0)
     if "format_version" in saved:
         saved = load_checkpoint(checkpoint)
         state = saved["model_state"]
         G, h = (saved["geometry"][name].numpy() for name in ("G", "h"))
-        if any(value is not None for value in (length, width, wheelbase)):
-            if length is None or width is None:
-                raise ValueError("Supply both length and width when checking geometry overrides")
-            check_g, check_h = rectangle_gh(length, width, wheelbase or 0.0)
+        if requested_geometry is not None:
+            check_g, check_h = requested_geometry
             if (G.shape != check_g.shape or not np.allclose(G, check_g, atol=1e-6, rtol=0)
                     or not np.allclose(h, check_h, atol=1e-6, rtol=0)):
                 raise ValueError("Export geometry differs from the geometry bound to training")
@@ -71,13 +58,10 @@ def export(checkpoint: str, out_path: str, length=None, width=None,
                     "validation": metrics, "data_key": saved.get("data_key"),
                     "environment": saved.get("environment")}
     else:
-        if length is None or width is None:
-            raise ValueError("Legacy weights have no geometry; supply --length and --width explicitly")
-        dimensions = [length, width, wheelbase or 0.0]
-        if not np.isfinite(dimensions).all() or length <= 0 or width <= 0:
-            raise ValueError("Robot dimensions must be finite and length/width positive")
+        if requested_geometry is None:
+            raise ValueError("Legacy weights have no geometry; supply --config or --length and --width explicitly")
         state = saved
-        G, h = rectangle_gh(length, width, wheelbase or 0.0)
+        G, h = requested_geometry
         metadata["legacy_geometry_unverified"] = True
     if edge_dim is not None and edge_dim != len(G):
         raise ValueError("edge_dim differs from checkpoint geometry")
@@ -149,14 +133,24 @@ def main():
         description="Export a trained DUNE model for neupan_core")
     parser.add_argument("checkpoint")
     parser.add_argument("output")
+    parser.add_argument("--config", type=Path, help="Planner YAML describing the trained robot geometry")
     parser.add_argument("--length", type=float)
     parser.add_argument("--width", type=float)
     parser.add_argument("--wheelbase", type=float)
     parser.add_argument("--edge-dim", type=int)
     parser.add_argument("--verify-with", type=Path, help="Path to neupan_verify_model")
     args = parser.parse_args()
-    export(args.checkpoint, args.output, args.length, args.width,
-           args.wheelbase, args.edge_dim, args.verify_with)
+    geometry = dict(length=args.length, width=args.width, wheelbase=args.wheelbase)
+    if args.config:
+        if any(value is not None for value in geometry.values()):
+            parser.error("Use either --config or dimension flags")
+        try:
+            document = yaml.safe_load(args.config.read_text())
+            geometry = normalize_robot(document["robot"])
+        except (KeyError, ValueError, TypeError, OSError, yaml.YAMLError) as error:
+            parser.error(str(error))
+    export(args.checkpoint, args.output, edge_dim=args.edge_dim,
+           verify_with=args.verify_with, **geometry)
 
 
 if __name__ == "__main__":

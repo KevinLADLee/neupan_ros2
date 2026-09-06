@@ -25,6 +25,23 @@ target_link_libraries(your_target PRIVATE neupan::neupan)
 
 ## C++ API
 
+Robot geometry follows the original NeuPAN configuration: `robot.vertices`
+accepts an ordered list of at least three `[x, y]` pairs for a single convex
+polygon. Coordinates are metres in the robot state/base frame. Clockwise and
+counterclockwise order are accepted; do not repeat the first vertex at the end.
+Explicit vertices override `length`, `width`, and `wheelbase`. If vertices are
+omitted or null, the existing rectangle configuration applies, including its
+wheelbase offset. Empty, nonfinite, repeated, degenerate, concave, and
+self-intersecting contours are rejected.
+
+The C++ equivalent is `NeuPANPlanner::Config::vertices` (a `2 x N` matrix;
+zero columns select a rectangle). Kinematics remain differential drive. Exact
+circle primitives and unions of convex parts are not supported; circles can be
+approximated with a convex polygon. DUNE weights must be trained for the same
+geometry and edge ordering. See
+[polygon_diff.yaml](../neupan_ros/config/polygon_diff.yaml) and the
+[training workflow](../../training/README.md).
+
 The main entry point is `neupan::NeuPANPlanner` from
 `<neupan/neupan_planner.hpp>`:
 

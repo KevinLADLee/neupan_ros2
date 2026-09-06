@@ -14,6 +14,7 @@
   <depend>nav_msgs</depend>
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>tf2_ros</depend>
   <depend>visualization_msgs</depend>
 
@@ -23,6 +24,8 @@
   <exec_depend>neupan_ros</exec_depend>
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>rviz2</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
 
