@@ -23,6 +23,14 @@ It is tested with ROS 2 Humble and Jazzy.
 All topic names documented below are relative names and support ROS 2 namespace
 and remapping rules.
 
+For a distributed fleet, run one independent launch on each robot and use the
+robot ID as both its ROS namespace and TF frame prefix. The robots share a
+`ROS_DOMAIN_ID`; no fleet simulator or central launcher is involved. The
+[Chinese distributed deployment guide](../../docs/distributed_multi_robot_CN.md)
+provides a reusable `neupan_robot.launch.py`, per-robot `robot_01.launch.py` and
+`robot_02.launch.py` wrappers, topic remapping, TF requirements, and peer
+obstacle-input options.
+
 ## Quick start
 
 Run the closed-loop example from the repository root:
