@@ -1,193 +1,82 @@
-# NeuPAN ROS2 Workspace
-
 <div align="center">
 
-<a href="https://ieeexplore.ieee.org/abstract/document/10938329"><img src='https://img.shields.io/badge/PDF-IEEE-brightgreen' alt='PDF'></a>
-<a href="https://arxiv.org/pdf/2403.06828.pdf"><img src='https://img.shields.io/badge/PDF-Arxiv-brightgreen' alt='PDF'></a>
-<a href="https://youtu.be/SdSLWUmZZgQ"><img src='https://img.shields.io/badge/Video-Youtube-blue' alt='youtube'></a>
-<a href="https://www.bilibili.com/video/BV1Zx421y778/?vd_source=cf6ba629063343717a192a5be9fe8985"><img src='https://img.shields.io/badge/Video-Bilibili-blue' alt='youtube'></a>
-<a href="https://hanruihua.github.io/neupan_project/"><img src='https://img.shields.io/badge/Website-NeuPAN-orange' alt='website'></a>
-[![ROS2](https://img.shields.io/badge/ROS2-Humble-blue.svg)](https://docs.ros.org/en/humble/)
-[![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.10+-green.svg)](https://www.python.org/)
+# NeuPAN ROS 2
 
-[English](README.md) | [中文](#概述)
+**基于 NeuPAN 的原生 C++ ROS 2 局部规划器**
+
+<a href="https://github.com/hanruihua/NeuPAN"><img src="https://img.shields.io/github/stars/hanruihua/NeuPAN?style=flat" alt="NeuPAN stars"></a>
+<a href="https://ieeexplore.ieee.org/document/10938329"><img src="https://img.shields.io/badge/Paper-IEEE-brightgreen" alt="IEEE 论文"></a>
+<a href="https://arxiv.org/pdf/2403.06828.pdf"><img src="https://img.shields.io/badge/Paper-arXiv-brightgreen" alt="arXiv 论文"></a>
+<a href="https://youtu.be/SdSLWUmZZgQ"><img src="https://img.shields.io/badge/Video-YouTube-red" alt="YouTube 视频"></a>
+<a href="https://www.bilibili.com/video/BV1Zx421y778/"><img src="https://img.shields.io/badge/Video-Bilibili-blue" alt="Bilibili 视频"></a>
+<a href="https://hanruihua.github.io/neupan_project/"><img src="https://img.shields.io/badge/Website-NeuPAN-orange" alt="NeuPAN 项目主页"></a>
+
+<a href="https://docs.ros.org/en/humble/"><img src="https://img.shields.io/badge/ROS%202-Humble-blue" alt="ROS 2 Humble"></a>
+<a href="https://docs.ros.org/en/jazzy/"><img src="https://img.shields.io/badge/ROS%202-Jazzy-blue" alt="ROS 2 Jazzy"></a>
+<a href="https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml"><img src="https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml/badge.svg" alt="ROS 2 CI"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later 协议"></a>
+
+[English](README.md) | [中文](README_CN.md)
 
 </div>
 
----
+NeuPAN ROS 2 通过原生 C++ 实现，将
+[NeuPAN](https://github.com/hanruihua/NeuPAN) 导航框架带到 ROS 2，面向机器人部署与仿真。
+项目支持 ROS 2 Humble 和 Jazzy。
 
-### 概述
+由 [Hive Matrix Limited](mailto:sales@hive-matrix.com) 维护。
 
-**NeuPAN ROS2 工作空间** 是一个基于 ROS2 的完整导航系统，包含：
+## 致谢
 
-- **NeuPAN 规划器** ([`src/neupan_ros2`](src/neupan_ros2)): 基于神经网络的端到端导航规划
-- **DDR Minimal Sim** ([`src/ddr_minimal_sim`](src/ddr_minimal_sim)): 轻量级差分驱动机器人仿真器
+本项目基于 [NeuPAN](https://github.com/hanruihua/NeuPAN)、
+[NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) 以及 Kaiyuan Zhang 的
+[neupan_cpp](https://github.com/zhangkaiyuan007/neupan_cpp)，仿真工作还参考了
+[DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt)。NeuPAN 算法成果归原论文全体作者所有。
 
-### 主要特性
+## Quick Start
 
-- 🤖 **端到端学习**: 使用神经网络直接从激光扫描生成速度指令
-- 🎯 **实时规划**: 快速神经网络推理，响应迅速
-- 🔄 **仿真到真机**: 在仿真和物理机器人（如 Limo）之间无缝切换
-- 🛠️ **易于测试**: 预配置场景用于算法验证
-- 📦 **模块化设计**: 独立包设计，使用灵活
-- 🔒 **线程安全**: 多线程架构与状态保护，确保稳定运行
-- 🎨 **可选可视化**: 可配置的 RViz 标记，优化嵌入式平台性能
-- ⚙️ **CI/CD 就绪**: 基于 Docker 的自动化测试和构建验证
-
-### 演示
-
-<div align="center">
-  <img src="imgs/sim-maze.gif" alt="NeuPAN 在迷宫场景中导航" width="600"/>
-  <p><em>NeuPAN 在复杂迷宫场景中自主导航</em></p>
-</div>
-
-### 快速开始
-
-#### 1. 前置要求
-
-- **ROS2**: Humble 或更新版本
-- **系统**: Ubuntu 22.04 (推荐)
-- **硬件**: CPU (可选 GPU 用于加速训练)
-
-#### 2. 安装依赖
+安装 ROS 2 Humble 或 Jazzy 并克隆仓库。将 `ROS_DISTRO` 设置为 `humble` 或 `jazzy`，
+然后执行：
 
 ```bash
-# 克隆工作空间
-git clone https://github.com/KevinLADLee/neupan_ros2.git
-cd neupan_ros2
-
-# 运行安装脚本（仅安装 ROS2 和 C++ 依赖）
-chmod +x setup.sh
-./setup.sh
-```
-
-<details>
-<summary>或手动安装</summary>
-
-**ROS2 依赖:**
-```bash
-sudo apt update
-sudo apt install -y \
-    ros-humble-tf2-tools \
-    ros-humble-tf2-ros \
-    ros-humble-nav-msgs \
-    ros-humble-sensor-msgs \
-    ros-humble-geometry-msgs \
-    ros-humble-visualization-msgs \
-    libeigen3-dev \
-    libyaml-cpp-dev
-```
-
-**Python 依赖:**
-
-⚠️ **重要:** NeuPAN 需要 numpy < 2.0
-
-请参考官方 NeuPAN 仓库了解详细安装说明：
-**https://github.com/hanruihua/NeuPAN**
-
-典型安装：
-```bash
-# 安装 PyTorch (从 https://pytorch.org 选择 CPU 或 GPU 版本)
-pip3 install torch torchvision
-
-# 安装 NeuPAN 和依赖
-pip3 install neupan
-pip3 install "numpy<2.0" scipy matplotlib pyyaml
-```
-</details>
-
-#### 3. 编译工作空间
-
-```bash
-# 使用编译脚本
-chmod +x build.sh
+ROS_DISTRO=humble
+source /opt/ros/$ROS_DISTRO/setup.bash
+./install_deps.sh
 ./build.sh
-
-# 或手动编译
-colcon build --symlink-install
 source install/setup.bash
+ros2 launch neupan_sim quick_start.launch.py
 ```
 
-#### 4. 运行演示
+该命令会启动演示和 RViz；无界面运行时添加 `rviz:=false`。系统要求和构建选项见
+[安装说明](docs/installation_CN.md)。
 
-**仿真 + NeuPAN:**
-```bash
-source install/setup.bash
-ros2 launch neupan_ros2 sim_complete.launch.py sim_env_config:=scenario_corridor.yaml
-```
+## 工作空间功能包
 
-**可用场景:** 查看 [ddr_minimal_sim 场景列表](src/ddr_minimal_sim/README.md#pre-configured-scenarios) 获取完整列表（走廊、迷宫、窄通道、U型陷阱、随机障碍、空旷空间）
+| 功能包 | 用途 | 文档 |
+| --- | --- | --- |
+| `neupan_solver_vendor` | 离线求解器依赖 | [README](thirdparty/README.md) |
+| `neupan_core` | NeuPAN 规划库 | [README](src/neupan_core/README.md) |
+| `neupan_ros` | ROS 2 集成 | [README](src/neupan_ros/README.md) |
+| `neupan_sim` | 仿真与验证 | [README](src/neupan_sim/README.md) |
 
-### 使用场景
+多台实际机器人在同一个 ROS domain 中独立运行时，请参阅
+[分布式多机器人部署](docs/distributed_multi_robot_CN.md)。文档给出了通用的单机器人
+launch，以及按 `robot_id` 固定 namespace、TF frame、模型和驱动话题的包装 launch。
 
-#### 场景 1: 真实机器人部署 (Limo)
+工作空间结构见 [src/README.md](src/README.md)，离线模型训练见
+[`training/README.md`](training/README.md)。
+[Scout Mini Diff 示例](examples/scout_mini_diff/README.md) 提供 612 mm × 580 mm
+车体的模型训练、配套配置和运行方法。
 
-在物理 Limo 机器人上部署 NeuPAN:
+## 文档
 
-```bash
-# 确保 Limo 驱动正在运行
-ros2 launch neupan_ros2 limo.launch.py
-```
+- [坐标系约定](docs/coordinate_frames_CN.md)
+- [ROS 2 话题概览](docs/ros_interfaces_CN.md)
+- [动态障碍物消息约定](docs/dynamic_obstacles_CN.md)
 
-#### 场景 2: 完整仿真
+## 引用
 
-完整系统（仿真器 + NeuPAN 规划器）:
-
-```bash
-ros2 launch neupan_ros2 sim_complete.launch.py
-
-ros2 launch neupan_ros2 sim_complete.launch.py sim_env_config:=scenario_maze.yaml
-```
-
-### 包详情
-
-#### 📦 src/neupan_ros2
-
-[NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) 神经导航规划器的 ROS2 实现。
-**[→ 文档](src/neupan_ros2/README.md)**
-
-#### 📦 src/ddr_minimal_sim
-
-轻量级差分驱动机器人仿真器，支持激光扫描和预配置测试场景。
-**[→ 文档](src/ddr_minimal_sim/README.md)**
-
-
-### 开发
-
-#### 编译
-
-```bash
-# 编译所有包
-colcon build --symlink-install
-
-# 编译特定包
-colcon build --packages-select neupan_ros2
-colcon build --packages-select ddr_minimal_sim
-```
-
-#### 自定义
-
-- **仿真器场景**: 参见 [ddr_minimal_sim 开发指南](src/ddr_minimal_sim/README.md#development) 了解自定义场景
-- **NeuPAN 参数**: 修改 `src/neupan_ros2/config/robots/<robot>/planner.yaml`
-
-### 持续集成
-
-[![ROS2 CI](https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml/badge.svg)](https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml)
-
-每次推送和拉取请求时自动测试：
-
-- **构建验证**: 在 Ubuntu 22.04 + ROS2 Humble 环境下编译工作空间
-- **代码质量**: flake8 和 pep257 代码检查，并生成 GitHub 注释
-- **Docker 构建**: 使用官方 ROS2 容器实现可重现构建
-- **优化缓存**: 快速 CI 运行（缓存命中时约 30 秒）
-- **工作空间验证**: 检测重复包和工作空间问题
-
-详细的工作流程信息请参见 [CI/CD 文档](.github/CI_README.md)。
-
-### 引用
-
-如果这段代码或论文对你有帮助，请为本仓库点个星 ⭐ 并引用我们的论文：
+如果 NeuPAN 对您的工作有帮助，请引用原始论文：
 
 ```bibtex
 @ARTICLE{10938329,
@@ -196,51 +85,16 @@ colcon build --packages-select ddr_minimal_sim
   title={NeuPAN: Direct Point Robot Navigation With End-to-End Model-Based Learning},
   year={2025},
   volume={41},
-  number={},
   pages={2804-2824},
-  doi={10.1109/TRO.2025.3554252}}
+  doi={10.1109/TRO.2025.3554252}
+}
 ```
 
-### 许可证
+## 开源协议
 
-本项目采用 **GNU 通用公共许可证 v3.0** 授权 - 详见 [LICENSE](LICENSE) 文件。
+NeuPAN ROS 2 的第一方代码采用
+[GNU General Public License v3.0 或更高版本](LICENSE)。本项目移植或参考的
+NeuPAN、NeuPAN-ROS、neupan_cpp 和 DDR-opt 均为 GPL-3.0 项目。
 
-### 故障排除
-
-<details>
-<summary>编译错误</summary>
-
-- 确保所有依赖已安装: `./setup.sh`
-- 检查 ROS2 已source: `source /opt/ros/humble/setup.bash`
-- 清理编译: `rm -rf build install log && colcon build`
-</details>
-
-<details>
-<summary>运行时错误</summary>
-
-- 验证包发现: `ros2 pkg list | grep -E "neupan|ddr"`
-- 检查话题: `ros2 topic list`
-- 查看日志: `ros2 run rqt_console rqt_console`
-</details>
-
-<details>
-<summary>NeuPAN 模型未找到</summary>
-
-- 检查模型文件存在: `src/neupan_ros2/config/robots/<robot>/models/dune_model_5000.pth`
-- 如果缺失，从仓库下载
-</details>
-
-### 贡献
-
-欢迎贡献！请在 [GitHub](https://github.com/KevinLADLee/neupan_ros2) 提交 issue 或 pull request。
-
-### 致谢
-
-- [NeuPAN](https://github.com/hanruihua/NeuPAN) & [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) - 原始算法
-- [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt) - 仿真器参考
-- ROS2 集成由 [HiveMatrix Limited](mailto:sales@hive-matrix.com) 在 [松灵机器人 Limo](https://global.agilex.ai/products/limo-pro) 平台优化与测试
-  - *对 Limo 机器人或技术支持感兴趣？联系 HiveMatrix - 您的商业支持为持续开源开发提供动力*
-
----
-
-**作者**: KevinLADLee (kevinladlee@gmail.com)
+随仓库提供的求解器组件保留各自的 Apache-2.0 或 BSD-3-Clause 协议。版本、来源、
+许可证文件及再分发声明见[第三方依赖清单](thirdparty/README.md)。

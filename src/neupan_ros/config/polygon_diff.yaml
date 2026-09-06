@@ -1,0 +1,29 @@
+# Original NeuPAN polygon_robot trapezoid, in the robot state/base frame (metres).
+# Train this geometry first and pass the resulting model.bin via dune_checkpoint.
+receding: 10
+step_time: 0.1
+ref_speed: 0.5
+collision_threshold: 0.1
+
+robot:
+  kinematics: diff
+  max_speed: [1.0, 1.0]
+  max_acce: [1.0, 2.0]
+  vertices: [[-0.8, -1.0], [-1.8, 1.0], [1.8, 1.0], [0.8, -1.0]]
+
+pan:
+  iter_num: 2
+  dune_max_num: 100
+  nrmp_max_num: 10
+  iter_threshold: 0.1
+  dune_checkpoint: ''
+
+adjust:
+  q_s: 1.0
+  p_u: 1.0
+  eta: 10.0
+  d_min: 0.1
+  d_max: 1.0
+
+train:
+  label_method: ecos

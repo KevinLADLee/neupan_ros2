@@ -1,0 +1,90 @@
+{
+  "epoch": 5000,
+  "training": {
+    "data_size": 100000,
+    "data_range": [
+      -25,
+      -25,
+      25,
+      25
+    ],
+    "batch_size": 1024,
+    "epoch": 5000,
+    "valid_freq": 20,
+    "save_freq": 100,
+    "lr": 5e-05,
+    "lr_decay": 0.5,
+    "decay_freq": 1500,
+    "seed": 0,
+    "label_method": "ecos",
+    "patience": 20,
+    "min_delta": 0.0
+  },
+  "robot": {
+    "length": 0.612,
+    "width": 0.58,
+    "wheelbase": 0.0
+  },
+  "validation": {
+    "losses": [
+      2.0193775524967353e-05,
+      5.1971216336824e-06,
+      1.4431449476978743e-05,
+      3.0101812724024058e-05
+    ],
+    "total_loss": 6.992415935965255e-05,
+    "distance_mae": 0.0016878423048183322,
+    "distance_max_error": 0.02427167445421219,
+    "distance_max_overestimate": 0.009447097778320312,
+    "max_dual_norm_violation": 0.011444449424743652,
+    "near_boundary_mae": 0.013285703025758266,
+    "near_boundary_count": 19,
+    "samples": 20000,
+    "rotation_evaluation": "mean over 0, pi/2, pi, 3pi/2"
+  },
+  "data_key": "b4f1748dc6bfa9897d4852c247729d8d38c44e9368faab82b987565cfa290f83",
+  "environment": {
+    "device": "cuda:0",
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "gpu": "NVIDIA GeForce RTX 4090"
+  },
+  "geometry": {
+    "G": [
+      [
+        0.0,
+        -0.612
+      ],
+      [
+        0.58,
+        -0.0
+      ],
+      [
+        0.0,
+        0.612
+      ],
+      [
+        -0.58,
+        -0.0
+      ]
+    ],
+    "h": [
+      [
+        0.17747999999999997
+      ],
+      [
+        0.17747999999999997
+      ],
+      [
+        0.17747999999999997
+      ],
+      [
+        0.17747999999999997
+      ]
+    ]
+  },
+  "sha256": "a63203d02afe26151332180390f796d68645b316da055e989dcef44fbe9dcfae",
+  "format": "NPTF",
+  "cpp_verification": "passed",
+  "cpp_output": "points=1024 max_mu_error=4.76837e-07 max_distance_error=5.72705e-06\n"
+}

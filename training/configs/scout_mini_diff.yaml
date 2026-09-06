@@ -1,0 +1,23 @@
+# Scout Mini: 612 mm longitudinal x 580 mm lateral.
+# Footprint origin is the rectangle centre (base_link); dimensions are metres.
+robot:
+  kinematics: diff
+  length: 0.612
+  width: 0.580
+  wheelbase: 0.0
+
+train:
+  device: cuda
+  data_size: 100000
+  data_range: [-25, -25, 25, 25]
+  batch_size: 1024
+  epochs: 5000
+  lr: 0.00005
+  lr_decay: 0.5
+  decay_freq: 1500
+  valid_freq: 20
+  save_freq: 100
+  patience: 20
+  min_delta: 0.0
+  seed: 0
+  label_method: ecos

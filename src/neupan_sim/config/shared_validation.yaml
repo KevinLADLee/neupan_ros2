@@ -1,0 +1,123 @@
+# One selected scenario runs in a shared world. All robots sense each other.
+robots:
+  square:
+    planner: package://neupan_ros/config/sentry_diff.yaml
+    checkpoint: package://neupan_ros/models/diff_sentry.bin
+  scout:
+    planner: package://neupan_ros/config/scout_mini_diff.yaml
+    checkpoint: package://neupan_ros/models/diff_scout_mini_612x580.bin
+  trapezoid:
+    planner: package://neupan_ros/config/polygon_diff.yaml
+    checkpoint: package://neupan_ros/models/diff_polygon.bin
+planner_overrides:
+  ref_speed: 0.6
+  robot:
+    max_speed:
+    - 1.0
+    - 1.0
+    max_acce:
+    - 1.0
+    - 2.0
+  ipath:
+    arrive_threshold: 0.1
+    arrive_index_threshold: 1
+simulator:
+  physics_rate: 100.0
+  sensor_rate: 20.0
+  diagnostics_rate: 10.0
+  world_bounds:
+  - -7.0
+  - 7.0
+  - -7.0
+  - 7.0
+  simulation_timeout: 40.0
+  goal_tolerance: 0.15
+  laser_pose:
+  - 0.0
+  - 0.0
+  - 0.0
+  scan_range_max: 8.0
+scenarios:
+  crossing:
+    robots:
+      alpha:
+        profile: square
+        initial_pose:
+        - -3.0
+        - 0.0
+        - 0.0
+        path_waypoints:
+        - -3.0
+        - 0.0
+        - 3.0
+        - 0.0
+      beta:
+        profile: scout
+        initial_pose:
+        - 0.0
+        - -3.0
+        - 1.5707963267948966
+        path_waypoints:
+        - 0.0
+        - -3.0
+        - 0.0
+        - 3.0
+  head_on:
+    robots:
+      alpha:
+        profile: square
+        initial_pose:
+        - -3.0
+        - 0.0
+        - 0.0
+        path_waypoints:
+        - -3.0
+        - 0.0
+        - 3.0
+        - 0.0
+      beta:
+        profile: scout
+        initial_pose:
+        - 3.0
+        - 0.0
+        - 3.141592653589793
+        path_waypoints:
+        - 3.0
+        - 0.0
+        - -3.0
+        - 0.0
+  mixed_three:
+    robots:
+      alpha:
+        profile: trapezoid
+        initial_pose:
+        - -4.0
+        - 0.0
+        - 0.0
+        path_waypoints:
+        - -4.0
+        - 0.0
+        - 4.0
+        - 0.0
+      beta:
+        profile: scout
+        initial_pose:
+        - 0.0
+        - -4.0
+        - 1.5707963267948966
+        path_waypoints:
+        - 0.0
+        - -4.0
+        - 0.0
+        - 4.0
+      gamma:
+        profile: square
+        initial_pose:
+        - 4.0
+        - 3.5
+        - 3.141592653589793
+        path_waypoints:
+        - 4.0
+        - 3.5
+        - -4.0
+        - 3.5

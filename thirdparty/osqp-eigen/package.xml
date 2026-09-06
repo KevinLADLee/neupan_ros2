@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>osqp_eigen</name>
+  <version>0.11.2</version>
+  <description>Simple Eigen-C++ wrapper for OSQP library</description>
+  <maintainer email="giulio.romualdi@gbionics.ai">Giulio Romualdi</maintainer>
+  <maintainer email="stefano.dafarra@gbionics.ai">Stefano Dafarra</maintainer>
+  <maintainer email="silvio.traversaro@gbionics.ai">Silvio Traversaro</maintainer>
+
+  <license>BSD-3-Clause</license>
+
+  <url type="website">https://github.com/gbionics/osqp-eigen</url>
+
+  <!-- The following tags are recommended by REP-136 -->
+  <exec_depend condition="$ROS_VERSION == 1">catkin</exec_depend>
+  <depend>osqp_vendor</depend>
+  <depend>eigen</depend>
+
+  <buildtool_depend>cmake</buildtool_depend>
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

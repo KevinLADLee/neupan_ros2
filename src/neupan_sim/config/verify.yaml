@@ -1,0 +1,38 @@
+neupan_sim:
+  ros__parameters:
+    scenario_name: "deterministic verification"
+    # The compact regression scene uses one fixed simulation step for physics,
+    # TF, odometry and sensor timing.
+    physics_rate: 100.0
+    sensor_rate: 20.0
+    diagnostics_rate: 10.0
+    integration_substeps: 2
+
+    initial_pose: [0.0, 0.0, 0.0]
+    # Flattened x/y pairs. The final pair is the verification goal.
+    path_waypoints: [0.0, 0.0, 6.0, 0.0]
+    path_spacing: 0.1
+
+    # [min_x, max_x, min_y, max_y], represented as exact line boundaries.
+    world_bounds: [-2.0, 8.0, -4.0, 4.0]
+    robot_size: [0.5, 0.5]
+    speed_limits: [2.0, 1.5]
+    acceleration_limits: [2.0, 2.0]
+    command_timeout: 0.25
+    goal_tolerance: 0.12
+    simulation_timeout: 30.0
+
+    # [x, y, yaw] transform from base_link to laser_link.
+    laser_pose: [0.15, 0.0, 0.0]
+    scan_angle_min: -3.141592653589793
+    scan_angle_max: 3.141592653589793
+    scan_angle_increment: 0.017453292519943295
+    scan_range_min: 0.05
+    scan_range_max: 8.0
+
+    # Continuous geometry: [x, y, radius] and [x, y, radius, vx, vy].
+    static_circles: [3.0, 0.65, 0.3]
+    dynamic_circles: [3.2, -1.5, 0.3, 0.0, 0.6]
+    # Optional exact wall segments use [x1, y1, x2, y2, ...]. Omit the
+    # parameter when no internal segments are needed; ROS 2 YAML has no typed
+    # representation for an empty numeric array.

@@ -1,0 +1,38 @@
+# Scout Mini footprint: 612 mm length x 580 mm width, centred on base_link.
+# Controller settings start from sentry_diff.yaml; tune speed/acceleration
+# limits to the actual platform. Load models/diff_scout_mini_612x580.bin.
+receding: 10
+step_time: 0.1
+ref_speed: 1.0
+collision_threshold: 0.05
+
+robot:
+  kinematics: 'diff'
+  max_speed: [2.0, 1.5]
+  max_acce: [2.0, 2.0]
+  length: 0.612
+  width: 0.580
+  wheelbase: 0.0
+
+ipath:
+  curve_style: 'line'
+  loop: False
+  arrive_threshold: 0.1
+  close_threshold: 0.1
+  ind_range: 10
+  arrive_index_threshold: 1
+
+pan:
+  iter_num: 2
+  dune_max_num: 100
+  nrmp_max_num: 10
+  iter_threshold: 0.1
+
+adjust:
+  q_s: 1.0
+  p_u: 1.0
+  eta: 15.0
+  d_max: 0.3
+  d_min: 0.05
+  ro_obs: 10.0
+  bk: 0.0

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>neupan_solver_vendor</name>
+  <version>0.1.0</version>
+  <description>Offline OSQP, osqp-eigen, QDLDL, and AMD vendor package for NeuPAN.</description>
+  <maintainer email="sales@hive-matrix.com">KevinLADLee (Hive Matrix Limited)</maintainer>
+  <license>GPL-3.0-or-later</license>
+  <license>Apache-2.0</license>
+  <license>BSD-3-Clause</license>
+
+  <buildtool_depend>cmake</buildtool_depend>
+  <depend>eigen</depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

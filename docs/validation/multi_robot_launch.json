@@ -1,0 +1,60 @@
+{
+  "entry": "ros2 launch neupan_sim validate_multi_robot.launch.py",
+  "config": "neupan_sim/config/multi_robot.yaml",
+  "date": "2026-09-06",
+  "mode": "shared_world_native_launch",
+  "rviz_start_and_shutdown_verified": true,
+  "static_circles": 2,
+  "segments": 1,
+  "dynamic_circles": 1,
+  "robots": {
+    "alpha": {
+      "result": "goal_reached",
+      "paused": "false",
+      "elapsed_time": "23.650000",
+      "goal_distance": "0.148905",
+      "path_length": "9.908541",
+      "clearance": "1.073295",
+      "minimum_clearance": "0.276496",
+      "actual_linear_speed": "0.000000",
+      "actual_angular_speed": "0.000000",
+      "command_age": "0.050000",
+      "scan_hits": "275",
+      "peer_count": "2",
+      "peer_hits": "8",
+      "total_peer_hits": "8366"
+    },
+    "beta": {
+      "result": "goal_reached",
+      "paused": "false",
+      "elapsed_time": "13.450000",
+      "goal_distance": "0.148679",
+      "path_length": "7.903116",
+      "clearance": "1.301268",
+      "minimum_clearance": "0.270730",
+      "actual_linear_speed": "0.000000",
+      "actual_angular_speed": "0.000000",
+      "command_age": "0.000000",
+      "scan_hits": "293",
+      "peer_count": "2",
+      "peer_hits": "40",
+      "total_peer_hits": "29510"
+    },
+    "gamma": {
+      "result": "goal_reached",
+      "paused": "false",
+      "elapsed_time": "14.380000",
+      "goal_distance": "0.148365",
+      "path_length": "7.851635",
+      "clearance": "1.917018",
+      "minimum_clearance": "0.500000",
+      "actual_linear_speed": "0.000000",
+      "actual_angular_speed": "0.000000",
+      "command_age": "0.000000",
+      "scan_hits": "248",
+      "peer_count": "2",
+      "peer_hits": "10",
+      "total_peer_hits": "16978"
+    }
+  }
+}

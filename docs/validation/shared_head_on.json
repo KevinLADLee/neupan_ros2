@@ -1,0 +1,36 @@
+{
+  "passed": false,
+  "error": null,
+  "cases": [
+    {
+      "case": "alpha",
+      "robot": "square",
+      "scenario": "head_on",
+      "result": "timed_out",
+      "passed": false,
+      "elapsed_time": 40.0,
+      "path_length": 3.420424,
+      "minimum_clearance": 0.300404,
+      "goal_distance": 3.292431,
+      "unsolved_samples": 0,
+      "peer_count": 1,
+      "total_peer_hits": 39837
+    },
+    {
+      "case": "beta",
+      "robot": "scout",
+      "scenario": "head_on",
+      "result": "timed_out",
+      "passed": false,
+      "elapsed_time": 40.0,
+      "path_length": 3.466868,
+      "minimum_clearance": 0.300404,
+      "goal_distance": 3.567046,
+      "unsolved_samples": 0,
+      "peer_count": 1,
+      "total_peer_hits": 32619
+    }
+  ],
+  "mode": "shared",
+  "note": "Shared world with mutual sensing and collisions."
+}
