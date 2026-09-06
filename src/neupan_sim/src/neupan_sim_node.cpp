@@ -786,9 +786,8 @@ class FleetNode final : public rclcpp::Node {
         throw std::invalid_argument("fleet robot names must be unique namespace components");
       const auto fqn = "/" + names[i] + "/neupan_sim";
       auto options = rclcpp::NodeOptions().use_global_arguments(false);
-      options.arguments({"--ros-args", "-r", "__ns:=/" + names[i]});
-      options.parameter_overrides(rclcpp::parameters_from_map(
-          rclcpp::parameter_map_from_yaml_file(files[i], fqn.c_str()), fqn.c_str()));
+      options.arguments({"--ros-args", "-r", "__ns:=/" + names[i],
+                         "--params-file", files[i]});
       auto node = std::make_shared<NeupanSimNode>(options, true);
       for (const auto* key : {"base_frame", "laser_frame"}) {
         if (!frames.insert(node->get_parameter(key).as_string()).second)
