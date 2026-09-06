@@ -176,3 +176,51 @@ unsolved diagnostic samples. These samples are not unique solver-failure events.
 The supervisor stops all children on completion, startup failure, interruption,
 or wall-clock timeout. Concurrent CPU load can affect ROS scheduling; simulated
 time and trajectory metrics should be compared separately from wall time.
+
+## Shared-world multi-robot validation
+
+Run two differential-drive robots with different footprints in one world:
+
+```bash
+ros2 run neupan_sim neupan_validate --shared \
+  --suite "$(ros2 pkg prefix --share neupan_sim)/config/shared_validation.yaml" \
+  --scenario crossing --output /tmp/neupan-shared-crossing --rviz
+```
+
+Or use `ros2 launch neupan_sim shared_validation.launch.py
+scenario:=crossing output:=/tmp/neupan-shared-crossing`. The suite also contains
+`head_on` (symmetric encounter) and `mixed_three` (trapezoid, Scout rectangle,
+square). Select one scenario per run; every member participates. Use the runner
+command directly when its success/failure exit code is needed in CI.
+
+Each robot has its own planner, commands, path, sensors and diagnostics under
+`/<name>/`. They share `shared_map`; `/<name>/base_link` and
+`/<name>/laser_link` are unique TF frames. `neupan_fleet_sim` owns all bodies in a
+single executor and advances them with one timer, after every start service has
+been called. At each physics substep all bodies move before contacts are tested.
+The dynamic circle environment advances once, including after a robot parks.
+
+Laser rays see the nearest world surface or other robot polygon (self excluded).
+The point cloud carries world-object velocities expressed in the sensor frame,
+including the angular contribution at each hit. NeuPAN consumes these points
+through its existing dynamic-obstacle interface. Polygon-to-polygon contact,
+containment and clearance are checked independently of the learned model.
+Stopped/arrived robots remain visible and collidable. A later contact changes an
+arrived robot's outcome to collision. `peer_count` and `total_peer_hits` in the
+JSON/CSV report confirm the sensing connection.
+
+This is decentralized local avoidance; it does not add a fleet priority or
+reservation planner. Symmetric deadlocks, timeouts and collisions remain failures
+and are recorded, rather than hidden by the harness. Exact repeated trajectories
+are not guaranteed because planner commands arrive over wall-clock ROS scheduling.
+The shared simulator's integration and contact order are deterministic for the
+same command sequence.
+
+To add a robot, define its planner YAML and matching DUNE model under `robots`,
+then add a named scenario member with `profile`, `initial_pose`, and
+`path_waypoints`. Optional `planner_overrides` can set its reference speed.
+Environment bounds, circles, segments and physics rate belong to the common
+`simulator` mapping. Fleet startup rejects inconsistent world parameters and
+reused robot TF frames. Shapes are single convex polygons; convex unions such as
+two circles or a concave T remain outside this implementation. Kinematics remain
+differential drive.

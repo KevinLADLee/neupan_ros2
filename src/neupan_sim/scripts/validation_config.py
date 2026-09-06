@@ -89,3 +89,54 @@ def finite_float(value):
         return number if math.isfinite(number) else None
     except (TypeError, ValueError):
         return None
+
+
+def load_shared_cases(path, resolve_package, scenario_name=None):
+    """Resolve one shared world; every robot is part of the same test outcome."""
+    path = Path(path).resolve()
+    document = yaml.safe_load(path.read_text())
+    scenarios = document['scenarios']
+    if scenario_name is None:
+        if len(scenarios) != 1:
+            raise ValueError('Select one shared scenario with --scenario')
+        scenario_name = next(iter(scenarios))
+    safe_name(scenario_name)
+    if scenario_name not in scenarios:
+        raise ValueError(f'Unknown shared scenario: {scenario_name}')
+    scenario = scenarios[scenario_name]
+    members = scenario['robots']
+    if len(members) < 2:
+        raise ValueError('A shared scenario needs at least two robots')
+    world = merge(document.get('simulator', {}), scenario.get('simulator', {}))
+
+    def resolve(value):
+        if value.startswith('package://'):
+            package, suffix = value[len('package://'):].split('/', 1)
+            result = Path(resolve_package(package)) / suffix
+        else:
+            result = path.parent / value
+        if not result.is_file():
+            raise ValueError(f'Missing validation input: {result}')
+        return str(result.resolve())
+
+    cases = []
+    for name, member in members.items():
+        safe_name(name)
+        profile = member['profile']
+        spec = document['robots'][profile]
+        config = yaml.safe_load(Path(resolve(spec['planner'])).read_text())
+        for override in (document.get('planner_overrides', {}), spec.get('overrides', {}),
+                         scenario.get('planner_overrides', {}), member.get('planner_overrides', {})):
+            config = merge(config, override)
+        if config['robot'].get('kinematics', 'diff') != 'diff':
+            raise ValueError('Shared simulation currently supports differential drive only')
+        sim = merge(world, dict(initial_pose=member['initial_pose'], path_waypoints=member['path_waypoints']))
+        robot = config['robot']
+        sim.update(robot_vertices=footprint(robot), speed_limits=robot['max_speed'],
+                   acceleration_limits=robot['max_acce'], scenario_name=f'{scenario_name}/{name}',
+                   start_paused=True, world_frame='shared_map', base_frame=f'{name}/base_link',
+                   laser_frame=f'{name}/laser_link')
+        cases.append(dict(name=name, robot=profile, scenario=scenario_name, planner=config,
+                          checkpoint=resolve(spec['checkpoint']), simulator=sim,
+                          expected=['goal_reached']))
+    return cases

@@ -47,5 +47,30 @@ class ValidationConfigTests(unittest.TestCase):
         self.assertIsNone(config.finite_float(None))
 
 
+class SharedConfigTests(unittest.TestCase):
+    def test_shared_world_and_profile_geometry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'model.bin').write_bytes(b'model')
+            (root / 'planner.yaml').write_text(yaml.safe_dump({'robot': {
+                'length': .5, 'width': .4, 'max_speed': [1., 1.], 'max_acce': [1., 2.]}}))
+            profile = {'planner': 'planner.yaml', 'checkpoint': 'model.bin'}
+            member = {'profile': 'small', 'initial_pose': [0.,0.,0.], 'path_waypoints': [0.,0.,3.,0.]}
+            suite = {'robots': {'small': profile}, 'simulator': {'world_bounds': [-5.,5.,-5.,5.]},
+                     'scenarios': {'crossing': {'robots': {'one': member, 'two': member}}}}
+            path = root / 'shared.yaml'; path.write_text(yaml.safe_dump(suite))
+            cases = config.load_shared_cases(path, lambda _: root)
+            self.assertEqual(len(cases),2)
+            self.assertEqual(cases[0]['simulator']['world_frame'],cases[1]['simulator']['world_frame'])
+            self.assertNotEqual(cases[0]['simulator']['base_frame'],cases[1]['simulator']['base_frame'])
+            self.assertEqual(cases[0]['simulator']['robot_vertices'],[-.25,-.2,.25,-.2,.25,.2,-.25,.2])
+            cases[0]['planner']['robot']['length'] = 10
+            self.assertEqual(cases[1]['planner']['robot']['length'],.5)
+            with self.assertRaises(ValueError): config.load_shared_cases(path, lambda _: root, 'absent')
+            del suite['scenarios']['crossing']['robots']['two']
+            path.write_text(yaml.safe_dump(suite))
+            with self.assertRaisesRegex(ValueError,'at least two'): config.load_shared_cases(path, lambda _: root)
+
+
 if __name__ == '__main__':
     unittest.main()

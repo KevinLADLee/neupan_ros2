@@ -376,6 +376,13 @@ double Simulation::clearance() const {
       corners.push_back(bodyToWorld(pose_, v));
   }
   const auto edges = robotEdges(corners);
+  for (const auto& peer : peers_) {
+    if (pointInsidePolygon(corners, peer.vertices.front()) ||
+        pointInsidePolygon(peer.vertices, corners.front())) return 0.0;
+    for (const auto& edge : edges)
+      for (const auto& other : robotEdges(peer.vertices))
+        best = std::min(best, segmentDistance(edge, other));
+  }
   for (const auto& circle : circles_) {
     if (polygon) {
       double distance = std::numeric_limits<double>::infinity();
@@ -420,7 +427,7 @@ RayHit Simulation::raycast(const Pose2& sensor_pose, double local_angle,
   const Vec2 direction{std::cos(angle), std::sin(angle)};
   RayHit best;
 
-  auto consider = [&](double distance, Vec2 velocity, bool dynamic) {
+  auto consider = [&](double distance, Vec2 velocity, bool dynamic, bool peer = false) {
     if (distance < best.range && distance <= range_max) {
       best.hit = true;
       best.range = std::max(distance, range_min);
@@ -428,6 +435,7 @@ RayHit Simulation::raycast(const Pose2& sensor_pose, double local_angle,
                     origin.y + best.range * direction.y};
       best.velocity = velocity;
       best.dynamic = dynamic;
+      best.peer = peer;
     }
   };
 
@@ -438,6 +446,19 @@ RayHit Simulation::raycast(const Pose2& sensor_pose, double local_angle,
   for (const auto& segment : segments_)
     consider(raySegment(origin, direction, segment), {}, false);
 
+  for (const auto& peer : peers_) {
+    for (const auto& edge : robotEdges(peer.vertices)) {
+      const double distance = raySegment(origin, direction, edge);
+      if (!std::isfinite(distance)) continue;
+      const Vec2 offset{origin.x + distance * direction.x - peer.pose.x,
+                        origin.y + distance * direction.y - peer.pose.y};
+      const Vec2 velocity{
+          peer.velocity.linear * std::cos(peer.pose.yaw) - peer.velocity.angular * offset.y,
+          peer.velocity.linear * std::sin(peer.pose.yaw) + peer.velocity.angular * offset.x};
+      consider(distance, velocity, std::hypot(velocity.x, velocity.y) > kEpsilon, true);
+    }
+  }
+
   const SegmentObstacle boundaries[] = {
       {{config_.min_x, config_.min_y}, {config_.max_x, config_.min_y}},
       {{config_.max_x, config_.min_y}, {config_.max_x, config_.max_y}},
@@ -446,6 +467,70 @@ RayHit Simulation::raycast(const Pose2& sensor_pose, double local_angle,
   for (const auto& boundary : boundaries)
     consider(raySegment(origin, direction, boundary), {}, false);
   return best;
+}
+
+std::vector<Vec2> Simulation::worldVertices() const {
+  if (config_.robot_vertices.empty())
+    return robotCorners(pose_, config_.robot_length, config_.robot_width);
+  std::vector<Vec2> vertices;
+  for (const auto& vertex : config_.robot_vertices)
+    vertices.push_back(bodyToWorld(pose_, vertex));
+  return vertices;
+}
+
+void Simulation::evaluateResult() {
+  const double distance = clearance();
+  minimum_clearance_ = std::min(minimum_clearance_, distance);
+  // Parked bodies remain collidable, including after reaching their goal.
+  if (distance <= 0.0) result_ = Result::Collision;
+  else if (result_ == Result::Running) {
+    if (goalDistance() <= config_.goal_tolerance) result_ = Result::GoalReached;
+    else if (elapsed_time_ >= config_.simulation_timeout) result_ = Result::TimedOut;
+  }
+  if (result_ != Result::Running) velocity_ = {};
+}
+
+void Simulation::synchronizeRobots(const std::vector<Simulation*>& robots) {
+  for (std::size_t i = 0; i < robots.size(); ++i) {
+    if (!robots[i] || std::find(robots.begin(), robots.begin() + i, robots[i]) != robots.begin() + i)
+      throw std::invalid_argument("fleet requires distinct, non-null simulations");
+  }
+  for (auto* robot : robots) {
+    robot->peers_.clear();
+    for (const auto* peer : robots)
+      if (peer != robot)
+        robot->peers_.push_back({peer->pose_, peer->velocity_, peer->worldVertices()});
+  }
+  for (auto* robot : robots) robot->evaluateResult();
+  // Contact/arrival can stop a body; sensor snapshots must carry its new velocity.
+  for (auto* robot : robots) {
+    std::size_t i = 0;
+    for (const auto* peer : robots)
+      if (peer != robot) robot->peers_[i++].velocity = peer->velocity_;
+  }
+}
+
+void Simulation::stepTogether(const std::vector<Simulation*>& robots, double dt) {
+  if (!(dt > 0.0) || !std::isfinite(dt))
+    throw std::invalid_argument("simulation step must be finite and positive");
+  synchronizeRobots(robots);
+  if (robots.empty()) return;
+  int substeps = 1;
+  for (const auto* robot : robots)
+    substeps = std::max(substeps, robot->config_.integration_substeps);
+  const double substep = dt / substeps;
+  for (int i = 0; i < substeps; ++i) {
+    // The shared environment continues even when its first robot has stopped.
+    robots.front()->integrateObstacles(substep);
+    for (auto* robot : robots) {
+      if (robot != robots.front()) robot->circles_ = robots.front()->circles_;
+      if (robot->result_ != Result::Running) continue;
+      robot->elapsed_time_ += substep;
+      robot->command_age_ += substep;
+      robot->integrateRobot(substep);
+    }
+    synchronizeRobots(robots);
+  }
 }
 
 }  // namespace neupan_sim

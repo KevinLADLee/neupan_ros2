@@ -39,6 +39,7 @@ struct RayHit {
   Vec2 point;
   Vec2 velocity;
   bool dynamic = false;
+  bool peer = false;
 };
 
 enum class Result { Running, GoalReached, Collision, TimedOut };
@@ -71,6 +72,12 @@ class Simulation {
 
   void setCommand(Twist2 command);
   void step(double dt);
+  // All members must describe the same environment. Integrate first, then
+  // snapshot peers and evaluate contacts, so list order cannot bias collisions.
+  static void synchronizeRobots(const std::vector<Simulation*>& robots);
+  static void stepTogether(const std::vector<Simulation*>& robots, double dt);
+  std::vector<Vec2> worldVertices() const;
+  std::size_t peerCount() const { return peers_.size(); }
 
   RayHit raycast(const Pose2& sensor_pose, double local_angle,
                  double range_min, double range_max) const;
@@ -94,6 +101,13 @@ class Simulation {
   void integrateRobot(double dt);
   void integrateObstacles(double dt);
   bool collides() const;
+  void evaluateResult();
+  struct Peer {
+    Pose2 pose;
+    Twist2 velocity;
+    std::vector<Vec2> vertices;
+  };
+  std::vector<Peer> peers_;
 
   SimulationConfig config_;
   Pose2 pose_;

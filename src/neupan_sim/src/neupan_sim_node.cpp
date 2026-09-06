@@ -6,6 +6,8 @@
 #include <limits>
 #include <memory>
 #include <sstream>
+#include <set>
+#include <rclcpp/parameter_map.hpp>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -97,7 +99,8 @@ void addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus& status,
 
 class NeupanSimNode final : public rclcpp::Node {
  public:
-  NeupanSimNode() : Node("neupan_sim") {
+  explicit NeupanSimNode(const rclcpp::NodeOptions& options = rclcpp::NodeOptions(),
+                         bool external_step = false) : Node("neupan_sim", options) {
     world_frame_ = declare_parameter<std::string>("world_frame", "map");
     base_frame_ = declare_parameter<std::string>("base_frame", "base_link");
     laser_frame_ = declare_parameter<std::string>("laser_frame", "laser_link");
@@ -222,7 +225,7 @@ class NeupanSimNode final : public rclcpp::Node {
     physics_period_ = 1.0 / physics_rate_;
     sensor_period_ = 1.0 / sensor_rate_;
     diagnostics_period_ = 1.0 / diagnostics_rate_;
-    timer_ = create_wall_timer(std::chrono::duration<double>(physics_period_),
+    if (!external_step) timer_ = create_wall_timer(std::chrono::duration<double>(physics_period_),
                                [this] { update(); });
 
     const auto stamp = now();
@@ -237,8 +240,11 @@ class NeupanSimNode final : public rclcpp::Node {
                 simulation_->circles().size(), simulation_->segments().size());
   }
 
- private:
-  void update() {
+  Simulation* simulation() { return simulation_.get(); }
+  bool started() const { return !paused_; }
+  double physicsPeriod() const { return physics_period_; }
+
+  void prepareTick() {
     // Publish sensors from the preceding physics snapshot. Its matching TF was
     // broadcast one timer tick earlier, avoiding cross-topic DDS ordering races.
     sensor_accumulator_ += physics_period_;
@@ -247,7 +253,9 @@ class NeupanSimNode final : public rclcpp::Node {
       publishSensors(last_state_stamp_);
     }
 
-    if (!paused_) simulation_->step(physics_period_);
+  }
+
+  void finishTick() {
     const auto stamp = now();
     publishState(stamp);
 
@@ -282,6 +290,13 @@ class NeupanSimNode final : public rclcpp::Node {
                      simulation_->minimumClearance());
       }
     }
+  }
+
+ private:
+  void update() {
+    prepareTick();
+    if (!paused_) simulation_->step(physics_period_);
+    finishTick();
   }
 
   void publishState(const rclcpp::Time& stamp) {
@@ -357,11 +372,13 @@ class NeupanSimNode final : public rclcpp::Node {
     const double c = std::cos(sensor_pose.yaw);
     const double s = std::sin(sensor_pose.yaw);
 
+    last_peer_hits_ = 0;
     for (std::size_t i = 0; i < beam_count; ++i) {
       const double local_angle = scan_angle_min_ + i * scan_angle_increment_;
       const auto hit = simulation_->raycast(sensor_pose, local_angle,
                                             scan_range_min_, scan_range_max_);
       if (!hit.hit) continue;
+      if (hit.peer) { ++last_peer_hits_; ++total_peer_hits_; }
       scan.ranges[i] = static_cast<float>(hit.range);
       const double dx = hit.point.x - sensor_pose.x;
       const double dy = hit.point.y - sensor_pose.y;
@@ -472,6 +489,9 @@ class NeupanSimNode final : public rclcpp::Node {
                   simulation_->velocity().angular);
     addDiagnostic(status, "command_age", simulation_->commandAge());
     addDiagnostic(status, "scan_hits", std::to_string(last_scan_hits_));
+    addDiagnostic(status, "peer_count", std::to_string(simulation_->peerCount()));
+    addDiagnostic(status, "peer_hits", std::to_string(last_peer_hits_));
+    addDiagnostic(status, "total_peer_hits", std::to_string(total_peer_hits_));
     array.status.push_back(std::move(status));
     diagnostics_pub_->publish(array);
   }
@@ -627,8 +647,8 @@ class NeupanSimNode final : public rclcpp::Node {
 
     auto status = marker(stamp, "status", 0,
                          visualization_msgs::msg::Marker::TEXT_VIEW_FACING);
-    status.pose.position.x = cfg.min_x + 0.3;
-    status.pose.position.y = cfg.max_y - 0.35;
+    status.pose.position.x = simulation_->peerCount() ? simulation_->pose().x : cfg.min_x + 0.3;
+    status.pose.position.y = simulation_->peerCount() ? simulation_->pose().y + 0.7 : cfg.max_y - 0.35;
     status.pose.position.z = 0.4;
     status.scale.z = 0.24;
     const bool failed =
@@ -673,6 +693,7 @@ class NeupanSimNode final : public rclcpp::Node {
   double scan_range_min_ = 0.05;
   double scan_range_max_ = 8.0;
   std::size_t last_scan_hits_ = 0;
+  std::size_t last_peer_hits_ = 0, total_peer_hits_ = 0;
   rclcpp::Time last_state_stamp_{0, 0, RCL_ROS_TIME};
 
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_sub_;
@@ -688,9 +709,80 @@ class NeupanSimNode final : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr timer_;
 };
 
+#ifndef NEUPAN_FLEET_MAIN
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv);
   rclcpp::spin(std::make_shared<NeupanSimNode>());
   rclcpp::shutdown();
   return 0;
 }
+
+#else
+// One executor owns every body: command callbacks never interleave a physics tick.
+class FleetNode final : public rclcpp::Node {
+ public:
+  FleetNode() : Node("neupan_fleet") {
+    const auto names = declare_parameter<std::vector<std::string>>("robot_names", std::vector<std::string>{});
+    const auto files = declare_parameter<std::vector<std::string>>("simulator_files", std::vector<std::string>{});
+    if (names.size() < 2 || names.size() != files.size())
+      throw std::invalid_argument("fleet needs >= 2 robot_names and matching simulator_files");
+    std::set<std::string> unique_names, frames;
+    for (std::size_t i = 0; i < names.size(); ++i) {
+      if (names[i].empty() || names[i].find('/') != std::string::npos || !unique_names.insert(names[i]).second)
+        throw std::invalid_argument("fleet robot names must be unique namespace components");
+      const auto fqn = "/" + names[i] + "/neupan_sim";
+      auto options = rclcpp::NodeOptions().use_global_arguments(false);
+      options.arguments({"--ros-args", "-r", "__ns:=/" + names[i]});
+      options.parameter_overrides(rclcpp::parameters_from_map(
+          rclcpp::parameter_map_from_yaml_file(files[i], fqn.c_str()), fqn.c_str()));
+      auto node = std::make_shared<NeupanSimNode>(options, true);
+      for (const auto* key : {"base_frame", "laser_frame"}) {
+        if (!frames.insert(node->get_parameter(key).as_string()).second)
+          throw std::invalid_argument("fleet base/laser frames must be unique");
+      }
+      if (!nodes_.empty()) {
+        for (const auto* key : {"world_frame", "world_bounds", "static_circles",
+                                "dynamic_circles", "segments", "physics_rate"}) {
+          if (node->get_parameter(key).get_parameter_value() !=
+              nodes_.front()->get_parameter(key).get_parameter_value())
+            throw std::invalid_argument(std::string("fleet has inconsistent shared parameter: ") + key);
+        }
+      }
+      simulations_.push_back(node->simulation());
+      nodes_.push_back(node);
+    }
+    if (frames.count(nodes_.front()->get_parameter("world_frame").as_string()))
+      throw std::invalid_argument("world frame cannot be a robot frame");
+    Simulation::synchronizeRobots(simulations_);
+    timer_ = create_wall_timer(std::chrono::duration<double>(nodes_.front()->physicsPeriod()), [this] {
+      for (const auto& node : nodes_) node->prepareTick();
+      if (std::all_of(nodes_.begin(), nodes_.end(), [](const auto& node) { return node->started(); }))
+        Simulation::stepTogether(simulations_, nodes_.front()->physicsPeriod());
+      for (const auto& node : nodes_) node->finishTick();
+    });
+    RCLCPP_INFO(get_logger(), "shared world ready: %zu robots", nodes_.size());
+  }
+  const auto& nodes() const { return nodes_; }
+ private:
+  std::vector<std::shared_ptr<NeupanSimNode>> nodes_;
+  std::vector<Simulation*> simulations_;
+  rclcpp::TimerBase::SharedPtr timer_;
+};
+
+int main(int argc, char** argv) {
+  rclcpp::init(argc, argv);
+  int result = 0;
+  try {
+    auto fleet = std::make_shared<FleetNode>();
+    rclcpp::executors::SingleThreadedExecutor executor;
+    executor.add_node(fleet);
+    for (const auto& node : fleet->nodes()) executor.add_node(node);
+    executor.spin();
+  } catch (const std::exception& error) {
+    RCLCPP_ERROR(rclcpp::get_logger("neupan_fleet"), "%s", error.what());
+    result = 1;
+  }
+  rclcpp::shutdown();
+  return result;
+}
+#endif
