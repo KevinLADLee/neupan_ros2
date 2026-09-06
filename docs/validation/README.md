@@ -48,3 +48,16 @@ Replace `crossing` with `head_on` or `mixed_three`. The independent replica suit
 remains the default without `--shared`. Add `--rviz` to display either mode.
 A report passes only when every robot reaches its goal and reports the expected
 number of peers. Frame/world configuration errors and child exits fail the run.
+
+## Complete interactive launch
+
+`ros2 launch neupan_sim validate_multi_robot.launch.py` directly starts one fleet
+simulator, three planner nodes, the readiness barrier and RViz. The default
+`multi_robot.yaml` adds two static circles, one segment and one moving circle to
+the three-shape world. No report output argument is required.
+
+[The launch integration run](multi_robot_launch.json) reached all three goals:
+trapezoid minimum clearance 0.276 m, Scout 0.271 m, square 0.500 m. Every robot
+reported two peers and nonzero peer sensor hits. A separate default-launch smoke
+check verified RViz with OpenGL 4.6 and clean shutdown of all processes on Ctrl-C.
+These are observed outcomes, not a guarantee for every scheduling or scene.

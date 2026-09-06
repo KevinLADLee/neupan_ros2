@@ -48,6 +48,8 @@ install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY config launch rviz DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS scripts/validate.py DESTINATION lib/${PROJECT_NAME}
   RENAME neupan_validate)
+install(PROGRAMS scripts/start_fleet.py DESTINATION lib/${PROJECT_NAME}
+  RENAME neupan_start_fleet)
 install(FILES scripts/validation_config.py DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

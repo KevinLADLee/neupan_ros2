@@ -224,3 +224,26 @@ Environment bounds, circles, segments and physics rate belong to the common
 reused robot TF frames. Shapes are single convex polygons; convex unions such as
 two circles or a concave T remain outside this implementation. Kinematics remain
 differential drive.
+
+## Interactive multi-robot launch
+
+```bash
+ros2 launch neupan_sim validate_multi_robot.launch.py
+```
+
+This is the complete scene entry point: one `neupan_fleet_sim`, three native
+NeuPAN planners (trapezoid `alpha`, Scout rectangle `beta`, square `gamma`), and
+RViz. It loads `config/multi_robot.yaml`, containing two static circles, one wall
+segment and one moving circle. All bodies and obstacles share one world.
+The launch directly owns the ROS processes. A small startup node waits for all
+planners, then releases the simulation's common start barrier and exits.
+The simulator, planners and RViz stay open after the run for inspection; Ctrl-C
+stops the scene. A simulator/planner exit shuts down the remaining processes.
+
+Use `rviz:=false` for a headless run or `config:=/absolute/path/to/scene.yaml`
+for another suite using the same schema. `scenario:=obstacle_world` is the
+default. No output directory or separate validation command is required.
+RViz shows all robot footprints, plans, laser scans (including other robots),
+static and moving obstacles, trajectories and result labels. Diagnostics remain
+available at `/<name>/neupan_sim/diagnostics`. As in the other shared scenarios,
+local avoidance may stall or time out in congested encounters.
