@@ -1,4 +1,6 @@
-# Shared scene: compact robots, 10 x 7 m world. All coordinates in metres.
+# Dense shared scene: 10 x 7 m; 11 static circles, 5 wall segments, 3 moving circles.
+# Alpha follows slalom waypoints; beta crosses the 1.55 m central wall opening.
+# Moving routes pass through wall gaps and stay clear of stationary goal footprints.
 robots:
   square:
     planner: package://neupan_ros/config/sentry_diff.yaml
@@ -30,7 +32,7 @@ simulator:
   - 5.0
   - -3.5
   - 3.5
-  simulation_timeout: 40.0
+  simulation_timeout: 60.0
   goal_tolerance: 0.15
   laser_pose:
   - 0.0
@@ -38,23 +40,76 @@ simulator:
   - 0.0
   scan_range_max: 8.0
   static_circles:
-  - -1.5
-  - 1.1
-  - 0.3
-  - 2.8
+  - -2.6
+  - 3.0
+  - 0.28
+  - -1.65
+  - 3.05
+  - 0.22
+  - -3.0
+  - -2.65
+  - 0.32
   - -2.0
-  - 0.4
-  dynamic_circles:
-  - 2.0
-  - -1.5
+  - -2.4
   - 0.25
-  - -0.35
+  - -1.05
+  - -2.85
+  - 0.22
+  - -1.8
+  - 0.15
+  - 0.26
+  - 2.5
+  - 0.1
+  - 0.3
+  - 3.5
+  - 3.0
+  - 0.22
+  - 2.6
+  - 3.05
+  - 0.25
+  - 3.2
+  - -2.6
+  - 0.35
+  - 2.25
+  - -2.75
+  - 0.22
+  dynamic_circles:
+  - 2.2
+  - -1.45
+  - 0.22
+  - -0.32
   - 0.0
+  - -3.7
+  - 0.75
+  - 0.18
+  - 0.23
+  - 0.0
+  - 0.6
+  - -2.5
+  - 0.15
+  - 0.0
+  - 0.23
   segments:
-  - -3.8
-  - -3.3
-  - 3.8
-  - -3.3
+  - -4.3
+  - -3.15
+  - -0.8
+  - -3.15
+  - 0.8
+  - -3.15
+  - 4.3
+  - -3.15
+  - -2.4
+  - 1.25
+  - -0.75
+  - 1.25
+  - 0.8
+  - 1.25
+  - 2.5
+  - 1.25
+  - 3.9
+  - -2.9
+  - 3.9
+  - -2.15
 scenarios:
   obstacle_world:
     robots:
@@ -67,6 +122,16 @@ scenarios:
         path_waypoints:
         - -3.8
         - 0.0
+        - -2.5
+        - -0.85
+        - -1.1
+        - -0.85
+        - 0.0
+        - -0.15
+        - 1.6
+        - -0.8
+        - 2.9
+        - -0.8
         - 3.8
         - 0.0
       beta:

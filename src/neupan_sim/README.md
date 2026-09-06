@@ -233,8 +233,8 @@ ros2 launch neupan_sim validate_multi_robot.launch.py
 
 This is the complete scene entry point: one `neupan_fleet_sim`, three native
 NeuPAN planners (trapezoid `alpha`, Scout rectangle `beta`, square `gamma`), and
-RViz. It loads `config/multi_robot.yaml`, containing two static circles, one wall
-segment and one moving circle. All bodies and obstacles share one world.
+RViz. It loads `config/multi_robot.yaml`, containing eleven static circles, five
+wall segments and three moving circles. All bodies and obstacles share one world.
 The launch directly owns the ROS processes. A small startup node waits for all
 planners, then releases the simulation's common start barrier and exits.
 The simulator, planners and RViz stay open after the run for inspection; Ctrl-C
@@ -260,9 +260,28 @@ Robot bodies, goals, plans and traces use consistent coral/blue/yellow colors.
 White arrows show body heading. Short three-line status labels sit above the map;
 the last line is elapsed seconds / minimum clearance in metres. Lasers can be
 expanded/enabled in each RViz group and are hidden initially. Shared world markers
-are drawn once. The map fits the default 1400 x 950 window with its display panel
-open. Polygon faces use upward winding, including for clockwise input vertices.
+are drawn once. The view and window geometry are loaded from the persistent
+`rviz/multi_robot.rviz` configuration, including the saved user zoom. Polygon faces use upward winding, including for clockwise input vertices.
 
 Optional simulator display parameters: `marker_color: [r, g, b]` (0..1),
 `robot_label`, `status_position: [x, y]`, and `show_world`. They affect markers only;
 physical geometry is always derived from the planner configuration.
+
+
+### Dense obstacle world and persistent RViz preferences
+
+The default world combines four corner obstacle clusters, two central slalom
+posts, a 1.55 m passage between wall segments, and three moving circles on two
+horizontal routes and one vertical route. Alpha follows intermediate waypoints
+around the posts, beta crosses the passage, and gamma traverses the upper lane.
+Moving routes clear every static circle and wall; the minimum route clearances
+are 0.48 m, 0.16 m and 0.05 m. Dynamic obstacles remain scripted bodies and do not
+negotiate with one another. The simulation limit is 60 s.
+
+The launch now loads the checked-in `rviz/multi_robot.rviz` directly, rather than
+creating a fresh temporary RViz file on every run. The user's saved camera scale
+268.7435607910156, window dimensions, dock arrangement and display settings were
+preserved. RViz Save can retain subsequent adjustments in that configuration;
+to use a separate saved preset, pass `rviz_config:=/absolute/path/to/custom.rviz`.
+When using custom robot names, update the topic groups in that preset as well.
+Headless verification uses `rviz:=false` and does not touch an open RViz session.

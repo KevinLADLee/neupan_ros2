@@ -71,3 +71,13 @@ all three goals with minimum clearances of 0.278 m, 0.216 m, and 0.216 m.
 All robots sensed two peers; the single displayed moving obstacle was observed
 moving. The [actual RViz screenshot](multi_robot_layout.png) verifies matching
 footprint colors, upward polygon faces, non-overlapping status text and map fit.
+
+## Dense obstacle revision
+
+The default scene now contains 11 static circles, 5 wall segments and 3 moving
+circles, with a slalom route and 1.55 m central opening. The earlier layout
+reports and screenshot remain historical snapshots. In the [dense run](multi_robot_dense.json),
+all robots reached: alpha 19.065 s / 0.271 m minimum clearance, beta 9.505 s /
+0.140 m, gamma 12.960 s / 0.213 m. Every robot sensed both peers. Launch exited
+cleanly on Ctrl-C. The entire user-saved RViz configuration was preserved,
+including scale 268.7435607910156, in `src/neupan_sim/rviz/multi_robot.rviz`.
