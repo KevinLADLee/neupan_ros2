@@ -52,6 +52,7 @@ struct SimulationConfig {
   double max_y = 4.0;
   double robot_length = 0.5;
   double robot_width = 0.5;
+  std::vector<Vec2> robot_vertices;  // body-frame convex polygon; overrides size
   double max_linear_speed = 2.0;
   double max_angular_speed = 1.5;
   double max_linear_acceleration = 2.0;

@@ -1,4 +1,5 @@
 #include <cmath>
+#include <algorithm>
 #include <limits>
 #include <vector>
 
@@ -15,6 +16,47 @@ using neupan_sim::SegmentObstacle;
 using neupan_sim::Simulation;
 using neupan_sim::SimulationConfig;
 using neupan_sim::Vec2;
+
+TEST(PolygonFootprint, ClearanceUsesEdgesInteriorAndPose) {
+  SimulationConfig config;
+  config.min_x = config.min_y = -10;
+  config.max_x = config.max_y = 10;
+  config.robot_vertices = {{0, 0}, {2, 0}, {0, 2}};
+  // Outside triangle, inside its bounding box: must not report collision.
+  Simulation outside(config, {}, {8, 8}, {{{1.5, 1.5}, 0.1, {}}}, {});
+  EXPECT_NEAR(outside.clearance(), std::sqrt(0.5) - 0.1, 1e-10);
+  EXPECT_EQ(outside.result(), Result::Running);
+  Simulation inside(config, {}, {8, 8}, {{{0.25, 0.25}, 0.1, {}}}, {});
+  EXPECT_NEAR(inside.clearance(), -0.35, 1e-10);
+  EXPECT_EQ(inside.result(), Result::Collision);
+  // Rotate by pi/2 and translate (3, 1); the clearance must be invariant.
+  Simulation rotated(config, {3, 1, std::acos(-1.0) / 2}, {8, 8},
+                     {{{1.5, 2.5}, 0.1, {}}}, {});
+  EXPECT_NEAR(rotated.clearance(), outside.clearance(), 1e-10);
+  std::reverse(config.robot_vertices.begin(), config.robot_vertices.end());
+  Simulation reversed(config, {}, {8, 8}, {{{1.5, 1.5}, 0.1, {}}}, {});
+  EXPECT_NEAR(reversed.clearance(), outside.clearance(), 1e-10);
+  Simulation segment(config, {}, {8, 8}, {}, {{{-1, 0.5}, {2, 0.5}}});
+  EXPECT_EQ(segment.result(), Result::Collision);
+  Simulation contained(config, {}, {8, 8}, {}, {{{.2, .2}, {.4, .4}}});
+  EXPECT_EQ(contained.result(), Result::Collision);
+  config.max_x = 1;
+  Simulation boundary(config, {}, {8, 8}, {}, {});
+  EXPECT_EQ(boundary.result(), Result::Collision);
+}
+
+TEST(PolygonFootprint, RejectsInvalidGeometry) {
+  for (const std::vector<Vec2> vertices : {
+           std::vector<Vec2>{{0, 0}, {1, 0}},
+           {{0, 0}, {1, 0}, {2, 0}},
+           {{0, 0}, {1, 0}, {0, 0}},
+           {{0, 0}, {2, 0}, {1, .5}, {2, 1}, {0, 1}},
+           {{0, 0}, {std::numeric_limits<double>::quiet_NaN(), 0}, {0, 1}}}) {
+    SimulationConfig config;
+    config.robot_vertices = vertices;
+    EXPECT_THROW(Simulation(config, {}, {5, 0}, {}, {}), std::invalid_argument);
+  }
+}
 
 SimulationConfig openWorld() {
   SimulationConfig config;

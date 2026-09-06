@@ -99,8 +99,56 @@ std::vector<Vec2> robotCorners(const Pose2& pose, double length, double width) {
 }
 
 std::vector<SegmentObstacle> robotEdges(const std::vector<Vec2>& corners) {
-  return {{corners[0], corners[1]}, {corners[1], corners[2]},
-          {corners[2], corners[3]}, {corners[3], corners[0]}};
+  std::vector<SegmentObstacle> edges;
+  for (std::size_t i = 0; i < corners.size(); ++i)
+    edges.push_back({corners[i], corners[(i + 1) % corners.size()]});
+  return edges;
+}
+
+bool pointInsidePolygon(const std::vector<Vec2>& vertices, const Vec2& point) {
+  bool positive = false, negative = false;
+  for (const auto& edge : robotEdges(vertices)) {
+    const double side = cross(subtract(edge.second, edge.first),
+                              subtract(point, edge.first));
+    positive |= side > kEpsilon;
+    negative |= side < -kEpsilon;
+  }
+  return !(positive && negative);
+}
+
+void validatePolygon(const std::vector<Vec2>& vertices) {
+  if (vertices.size() < 3)
+    throw std::invalid_argument("robot_vertices requires >= 3 vertices");
+  double min_x = vertices[0].x, max_x = min_x;
+  double min_y = vertices[0].y, max_y = min_y;
+  for (const auto& v : vertices) {
+    if (!std::isfinite(v.x) || !std::isfinite(v.y))
+      throw std::invalid_argument("robot_vertices must be finite");
+    min_x = std::min(min_x, v.x); max_x = std::max(max_x, v.x);
+    min_y = std::min(min_y, v.y); max_y = std::max(max_y, v.y);
+  }
+  const double scale = std::max(max_x - min_x, max_y - min_y);
+  if (!std::isfinite(scale) || scale <= 0.0)
+    throw std::invalid_argument("degenerate robot polygon");
+  std::vector<Vec2> local;
+  for (const auto& v : vertices)
+    local.push_back({(v.x - vertices[0].x) / scale,
+                     (v.y - vertices[0].y) / scale});
+  double area = 0.0;
+  for (std::size_t i = 0; i < local.size(); ++i) {
+    area += cross(local[i], local[(i + 1) % local.size()]);
+    for (std::size_t j = i + 1; j < local.size(); ++j)
+      if (norm(subtract(local[i], local[j])) <= 1e-12)
+        throw std::invalid_argument("repeated robot polygon vertex");
+  }
+  if (std::abs(area) <= 1e-12)
+    throw std::invalid_argument("robot polygon has zero area");
+  const double direction = area > 0.0 ? 1.0 : -1.0;
+  for (const auto& edge : robotEdges(local))
+    for (const auto& point : local)
+      if (direction * cross(subtract(edge.second, edge.first),
+                             subtract(point, edge.first)) < -1e-12)
+        throw std::invalid_argument("robot polygon is not convex and ordered");
 }
 
 bool pointInsideRobot(const Pose2& pose, double length, double width,
@@ -213,8 +261,10 @@ Simulation::Simulation(SimulationConfig config, Pose2 initial_pose, Vec2 goal,
 }
 
 void Simulation::validate() const {
+  if (!config_.robot_vertices.empty()) validatePolygon(config_.robot_vertices);
   if (config_.min_x >= config_.max_x || config_.min_y >= config_.max_y ||
-      config_.robot_length <= 0.0 || config_.robot_width <= 0.0 ||
+      (config_.robot_vertices.empty() &&
+       (config_.robot_length <= 0.0 || config_.robot_width <= 0.0)) ||
       config_.max_linear_speed <= 0.0 || config_.max_angular_speed <= 0.0 ||
       config_.max_linear_acceleration <= 0.0 ||
       config_.max_angular_acceleration <= 0.0 ||
@@ -318,20 +368,34 @@ double Simulation::goalDistance() const {
 
 double Simulation::clearance() const {
   double best = std::numeric_limits<double>::infinity();
+  const bool polygon = !config_.robot_vertices.empty();
+  auto corners = robotCorners(pose_, config_.robot_length, config_.robot_width);
+  if (polygon) {
+    corners.clear();
+    for (const auto& v : config_.robot_vertices)
+      corners.push_back(bodyToWorld(pose_, v));
+  }
+  const auto edges = robotEdges(corners);
   for (const auto& circle : circles_) {
-    best = std::min(best, orientedBoxCircleClearance(
+    if (polygon) {
+      double distance = std::numeric_limits<double>::infinity();
+      for (const auto& edge : edges)
+        distance = std::min(distance, pointSegmentDistance(circle.center, edge));
+      if (pointInsidePolygon(corners, circle.center)) distance = -distance;
+      best = std::min(best, distance - circle.radius);
+    } else {
+      best = std::min(best, orientedBoxCircleClearance(
                               pose_, config_.robot_length, config_.robot_width,
                               circle));
+    }
   }
-
-  const auto corners =
-      robotCorners(pose_, config_.robot_length, config_.robot_width);
-  const auto edges = robotEdges(corners);
   for (const auto& segment : segments_) {
-    if (pointInsideRobot(pose_, config_.robot_length, config_.robot_width,
-                         segment.first) ||
-        pointInsideRobot(pose_, config_.robot_length, config_.robot_width,
-                         segment.second)) {
+    const auto inside = [&](const Vec2& point) {
+      return polygon ? pointInsidePolygon(corners, point)
+                     : pointInsideRobot(pose_, config_.robot_length,
+                                        config_.robot_width, point);
+    };
+    if (inside(segment.first) || inside(segment.second)) {
       return 0.0;
     }
     for (const auto& edge : edges)

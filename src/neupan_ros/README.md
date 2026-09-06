@@ -1,5 +1,20 @@
 # neupan_ros
 
+Differential-drive robots support rectangles and single convex polygons via
+`robot.vertices` in the planner YAML; see [polygon_diff.yaml](config/polygon_diff.yaml).
+Use the same geometry for [DUNE training](../../training/README.md), and supply
+the resulting model via `dune_checkpoint`. RViz `robot_marker` displays the
+actual polygon in the robot state frame, including asymmetric footprints.
+Omni/Ackermann kinematics and compound or concave robot shapes are not supported.
+
+After training, launch with explicit geometry and matching weights:
+
+```bash
+ros2 launch neupan_ros neupan.launch.py \
+  config_file:=$PWD/src/neupan_ros/config/polygon_diff.yaml \
+  dune_checkpoint:=$PWD/training/runs/polygon/model.bin
+```
+
 `neupan_ros` is an `ament_cmake` package that exposes `neupan_core` through ROS
 2. It installs the `neupan_node` local planner, a small `astar_global_node` used
 by the example launch file, configuration files, and a composable node.

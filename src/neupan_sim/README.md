@@ -1,5 +1,14 @@
 # neupan_sim
 
+For a convex polygon robot, set the ROS parameter `robot_vertices` to the flat
+list `[x1, y1, x2, y2, ...]` in metres in the robot state frame. For example, the
+planner's trapezoid `robot.vertices` corresponds to
+`[-0.8, -1.0, -1.8, 1.0, 1.8, 1.0, 0.8, -1.0]`. Use the same ordered vertices
+in the planner and simulator. Nonempty vertices override `robot_size`; the
+default empty list keeps the existing rectangular robot. Collision checks
+against circles, segments and world bounds, and the robot marker, use this
+polygon. This changes geometry only; the simulated motion remains differential drive.
+
 `neupan_sim` is an `ament_cmake` package for closed-loop NeuPAN demonstrations
 and integration tests. It provides a deterministic differential-drive simulator
 with continuous collision geometry; it is not a general-purpose robotics
@@ -124,3 +133,46 @@ LaserScan hit count.
 All scenario geometry uses `map`, while sensor messages use `laser_link`. See
 the [coordinate-frame contract](../../docs/coordinate_frames.md) and
 [dynamic-obstacle message contract](../../docs/dynamic_obstacles_CN.md).
+
+## Parallel shape validation
+
+Run the shape × scenario matrix with a single command (a nonzero exit means
+at least one unexpected result or an infrastructure failure):
+
+```bash
+ros2 run neupan_sim neupan_validate --output /tmp/neupan-validation-1
+# Optional single RViz, with scene copies laid out in a grid:
+ros2 run neupan_sim neupan_validate --output /tmp/neupan-validation-2 --rviz
+# Launch equivalent:
+ros2 launch neupan_sim validation.launch.py output:=/tmp/neupan-validation-3 rviz:=true
+```
+
+The default [suite](config/validation.yaml) covers square, Scout Mini rectangle,
+and the original NeuPAN trapezoid in open, static-obstacle, corridor, and moving
+obstacle scenes (12 cases). Each case owns its planner/model, simulated robot,
+topics, and TF frames. Geometry and actuator limits are derived from the planner
+configuration, including rectangle axle offsets. Copies do not sense or collide
+with each other. Display-only static transforms place their maps under
+`validation_world` without changing their local physics.
+
+Simulators start paused and continue publishing stationary TF, sensors and paths.
+The supervisor waits for every planner to report a successful solve, then calls
+each simulator's `start` Trigger service. The default standalone simulator still
+starts immediately. `world_frame`, `base_frame`, `laser_frame`, and `start_paused`
+are optional simulator parameters; defaults preserve the original single-robot
+launches.
+
+Use `--suite FILE` for another matrix or repeat `--case square_open` to select
+specific cases. Profiles reference planner/model files relative to the suite,
+or via `package://PACKAGE/path`. The trapezoid checkpoint is exported from
+upstream `example/model/polygon_robot/model_5000.pth`; its provenance and numerical
+verification are recorded in `neupan_core/models/diff_polygon.bin.json`.
+
+The output directory contains resolved per-case YAMLs, child process logs,
+`validation.rviz`, `summary.json`, and `summary.csv`. Existing results are never
+overwritten. Summary rows contain the terminal result, elapsed simulated time,
+path length, goal distance, minimum exact geometric clearance and the number of
+unsolved diagnostic samples. These samples are not unique solver-failure events.
+The supervisor stops all children on completion, startup failure, interruption,
+or wall-clock timeout. Concurrent CPU load can affect ROS scheduling; simulated
+time and trajectory metrics should be compared separately from wall time.

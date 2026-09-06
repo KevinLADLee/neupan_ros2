@@ -19,28 +19,37 @@ namespace neupan {
 
 namespace {
 
-// Cross product sign sweep: returns +1 for CCW, -1 for CW, throws if the
-// polygon is not convex (mirrors neupan.util.is_convex_and_ordered).
+// Preserve upstream winding/edge order, but reject degenerate and self-crossing
+// input too: every vertex must lie on the interior side of every edge.
 int convexOrientation(const Mat2X& v) {
   const Eigen::Index n = v.cols();
   if (n < 3) throw std::invalid_argument("robot: polygon needs >= 3 vertices");
-
-  double direction = 0.0;
+  if (!v.allFinite()) throw std::invalid_argument("robot: vertices must be finite");
+  const double scale = (v.rowwise().maxCoeff() - v.rowwise().minCoeff()).maxCoeff();
+  if (scale <= 0.0 || !std::isfinite(scale))
+    throw std::invalid_argument("robot: degenerate polygon");
+  const Mat2X local = (v.colwise() - v.col(0)) / scale;
+  constexpr double tolerance = 1e-12;
+  const auto cross = [](const Vec2& a, const Vec2& b) {
+    return a.x() * b.y() - a.y() * b.x();
+  };
+  double area = 0.0;
   for (Eigen::Index i = 0; i < n; ++i) {
-    const Vec2 o = v.col(i);
-    const Vec2 a = v.col((i + 1) % n);
-    const Vec2 b = v.col((i + 2) % n);
-    const double cross =
-        (a.x() - o.x()) * (b.y() - o.y()) - (a.y() - o.y()) * (b.x() - o.x());
-    if (cross != 0.0) {
-      if (direction == 0.0) {
-        direction = cross;
-      } else if (direction * cross < 0.0) {
-        throw std::invalid_argument("robot: polygon is not convex");
-      }
-    }
+    area += cross(local.col(i), local.col((i + 1) % n));
+    for (Eigen::Index j = i + 1; j < n; ++j)
+      if ((local.col(i) - local.col(j)).norm() <= tolerance)
+        throw std::invalid_argument("robot: repeated polygon vertex");
   }
-  return direction > 0.0 ? 1 : -1;
+  if (std::abs(area) <= tolerance)
+    throw std::invalid_argument("robot: polygon has zero area");
+  const int direction = area > 0.0 ? 1 : -1;
+  for (Eigen::Index i = 0; i < n; ++i) {
+    const Vec2 edge = local.col((i + 1) % n) - local.col(i);
+    for (Eigen::Index j = 0; j < n; ++j)
+      if (direction * cross(edge, local.col(j) - local.col(i)) < -tolerance)
+        throw std::invalid_argument("robot: polygon is not convex and ordered");
+  }
+  return direction;
 }
 
 }  // namespace
@@ -84,6 +93,9 @@ Robot::Robot(Kinematics kinematics, int receding, double step_time,
 Robot Robot::diffRectangle(int receding, double step_time, Vec2 max_speed,
                            Vec2 max_acce, double length, double width,
                            double wheelbase) {
+  if (!std::isfinite(length) || !std::isfinite(width) ||
+      !std::isfinite(wheelbase) || length <= 0.0 || width <= 0.0)
+    throw std::invalid_argument("robot: rectangle dimensions must be finite and positive");
   const double sx = -(length - wheelbase) / 2.0;
   const double sy = -width / 2.0;
   Mat2X v(2, 4);

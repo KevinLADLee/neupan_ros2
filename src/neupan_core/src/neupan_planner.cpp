@@ -21,6 +21,9 @@ namespace neupan {
 namespace {
 
 Robot makeRobot(const NeuPANPlanner::Config& c) {
+  if (c.vertices.cols() > 0)
+    return Robot(Kinematics::Diff, c.receding, c.step_time, c.max_speed,
+                 c.max_acce, c.vertices);
   return Robot::diffRectangle(c.receding, c.step_time, c.max_speed,
                               c.max_acce, c.length, c.width, c.wheelbase);
 }
@@ -103,6 +106,16 @@ NeuPANPlanner NeuPANPlanner::fromYaml(const std::string& yaml_path,
     c.length = r["length"].as<double>(c.length);
     c.width = r["width"].as<double>(c.width);
     c.wheelbase = r["wheelbase"].as<double>(0.0);
+    if (const auto vertices = r["vertices"]; vertices && !vertices.IsNull()) {
+      if (!vertices.IsSequence() || vertices.size() < 3)
+        throw std::invalid_argument("robot.vertices must contain >= 3 [x, y] pairs");
+      c.vertices.resize(2, vertices.size());
+      for (std::size_t i = 0; i < vertices.size(); ++i) {
+        if (!vertices[i].IsSequence() || vertices[i].size() != 2)
+          throw std::invalid_argument("robot.vertices entries must be [x, y] pairs");
+        c.vertices.col(i) << vertices[i][0].as<double>(), vertices[i][1].as<double>();
+      }
+    }
   }
 
   if (const auto ip = y["ipath"]) {

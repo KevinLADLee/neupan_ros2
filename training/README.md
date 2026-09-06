@@ -43,10 +43,37 @@ uv run --project training --locked neupan-train \
   --config training/configs/diff.yaml --output training/runs/diff
 ```
 
-Use one robot YAML for training and deployment. The `robot.length`, `robot.width`
-and optional `robot.wheelbase` fields are consumed from either a planner YAML or
-the example above; an optional `train` section sets training parameters. CLI
-flags override YAML values. The CLI currently supports rectangular footprints.
+Use one robot YAML for training and deployment. Supply `robot.vertices` for a
+single convex polygon, or `robot.length`, `robot.width` and optional
+`robot.wheelbase` for a rectangle. An optional `train` section sets training
+parameters. Vertices take precedence over dimensions, as in original NeuPAN.
+They must be ordered `[x, y]` pairs in metres in the robot state/base frame;
+either winding is accepted, without a repeated closing vertex. Dimension CLI
+flags override rectangle dimensions; they are rejected for a polygon config.
+
+For example, train the original NeuPAN trapezoid geometry with:
+
+```bash
+uv run --project training --locked neupan-train \
+  --config src/neupan_ros/config/polygon_diff.yaml --output training/runs/polygon
+```
+
+Use `label_method: ecos` (the default) for polygons. The output dimension follows
+the number of edges. Training, resume and export bind the weights to `G/h`;
+use the same robot YAML and generated `model.bin` for deployment. A different
+shape or size requires a matching trained model. Training a small smoke test
+does not produce a navigation-quality model.
+
+Original Python `.pth` state dictionaries can also be exported with their
+training geometry explicitly supplied:
+
+```bash
+uv run --project training --locked neupan-export original_polygon.pth polygon.bin \
+  --config src/neupan_ros/config/polygon_diff.yaml
+```
+
+Legacy weights contain no geometry metadata; this command binds the supplied
+geometry but cannot verify that it was the geometry used during training.
 
 Geometry flags remain available:
 

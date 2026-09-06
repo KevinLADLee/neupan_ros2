@@ -20,6 +20,7 @@
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
+#include <std_srvs/srv/trigger.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
@@ -97,6 +98,20 @@ void addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus& status,
 class NeupanSimNode final : public rclcpp::Node {
  public:
   NeupanSimNode() : Node("neupan_sim") {
+    world_frame_ = declare_parameter<std::string>("world_frame", "map");
+    base_frame_ = declare_parameter<std::string>("base_frame", "base_link");
+    laser_frame_ = declare_parameter<std::string>("laser_frame", "laser_link");
+    if (world_frame_.empty() || base_frame_.empty() || laser_frame_.empty() ||
+        world_frame_ == base_frame_ || world_frame_ == laser_frame_ || base_frame_ == laser_frame_)
+      throw std::invalid_argument("simulator frame IDs must be nonempty and distinct");
+    paused_ = declare_parameter<bool>("start_paused", false);
+    start_service_ = create_service<std_srvs::srv::Trigger>(
+        "start", [this](const std::shared_ptr<std_srvs::srv::Trigger::Request>,
+                        std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+          paused_ = false;
+          response->success = true;
+          response->message = "simulation running";
+        });
     physics_rate_ = declare_parameter<double>("physics_rate", 100.0);
     sensor_rate_ = declare_parameter<double>("sensor_rate", 20.0);
     diagnostics_rate_ = declare_parameter<double>("diagnostics_rate", 10.0);
@@ -112,6 +127,8 @@ class NeupanSimNode final : public rclcpp::Node {
         "world_bounds", {-2.0, 8.0, -4.0, 4.0});
     const auto robot_size = declare_parameter<std::vector<double>>(
         "robot_size", {0.5, 0.5});
+    const auto robot_vertices = declare_parameter<std::vector<double>>(
+        "robot_vertices", std::vector<double>{});
     const auto speed_limits = declare_parameter<std::vector<double>>(
         "speed_limits", {2.0, 1.5});
     const auto acceleration_limits = declare_parameter<std::vector<double>>(
@@ -159,6 +176,11 @@ class NeupanSimNode final : public rclcpp::Node {
     config.max_y = bounds[3];
     config.robot_length = robot_size[0];
     config.robot_width = robot_size[1];
+    if (!robot_vertices.empty() &&
+        (robot_vertices.size() < 6 || robot_vertices.size() % 2 != 0))
+      throw std::invalid_argument("robot_vertices must be [x1, y1, x2, y2, ...], >= 3 vertices");
+    for (std::size_t i = 0; i < robot_vertices.size(); i += 2)
+      config.robot_vertices.push_back({robot_vertices[i], robot_vertices[i + 1]});
     config.max_linear_speed = speed_limits[0];
     config.max_angular_speed = speed_limits[1];
     config.max_linear_acceleration = acceleration_limits[0];
@@ -225,7 +247,7 @@ class NeupanSimNode final : public rclcpp::Node {
       publishSensors(last_state_stamp_);
     }
 
-    simulation_->step(physics_period_);
+    if (!paused_) simulation_->step(physics_period_);
     const auto stamp = now();
     publishState(stamp);
 
@@ -269,8 +291,8 @@ class NeupanSimNode final : public rclcpp::Node {
 
     geometry_msgs::msg::TransformStamped map_to_base;
     map_to_base.header.stamp = stamp;
-    map_to_base.header.frame_id = "map";
-    map_to_base.child_frame_id = "base_link";
+    map_to_base.header.frame_id = world_frame_;
+    map_to_base.child_frame_id = base_frame_;
     map_to_base.transform.translation.x = pose.x;
     map_to_base.transform.translation.y = pose.y;
     map_to_base.transform.rotation = orientation;
@@ -278,8 +300,8 @@ class NeupanSimNode final : public rclcpp::Node {
 
     geometry_msgs::msg::TransformStamped base_to_laser;
     base_to_laser.header.stamp = stamp;
-    base_to_laser.header.frame_id = "base_link";
-    base_to_laser.child_frame_id = "laser_link";
+    base_to_laser.header.frame_id = base_frame_;
+    base_to_laser.child_frame_id = laser_frame_;
     base_to_laser.transform.translation.x = laser_pose_.x;
     base_to_laser.transform.translation.y = laser_pose_.y;
     base_to_laser.transform.rotation = yawToQuaternion(laser_pose_.yaw);
@@ -287,7 +309,7 @@ class NeupanSimNode final : public rclcpp::Node {
 
     nav_msgs::msg::Odometry odom;
     odom.header = map_to_base.header;
-    odom.child_frame_id = "base_link";
+    odom.child_frame_id = base_frame_;
     odom.pose.pose.position.x = pose.x;
     odom.pose.pose.position.y = pose.y;
     odom.pose.pose.orientation = orientation;
@@ -306,7 +328,7 @@ class NeupanSimNode final : public rclcpp::Node {
   void publishSensors(const rclcpp::Time& stamp) {
     sensor_msgs::msg::LaserScan scan;
     scan.header.stamp = stamp;
-    scan.header.frame_id = "laser_link";
+    scan.header.frame_id = laser_frame_;
     scan.angle_min = static_cast<float>(scan_angle_min_);
     scan.angle_max = static_cast<float>(scan_angle_max_);
     scan.angle_increment = static_cast<float>(scan_angle_increment_);
@@ -391,7 +413,7 @@ class NeupanSimNode final : public rclcpp::Node {
   void publishPath(const rclcpp::Time& stamp) {
     nav_msgs::msg::Path path;
     path.header.stamp = stamp;
-    path.header.frame_id = "map";
+    path.header.frame_id = world_frame_;
     for (std::size_t segment = 0; segment + 1 < path_waypoints_.size();
          ++segment) {
       const Vec2 first = path_waypoints_[segment];
@@ -437,6 +459,7 @@ class NeupanSimNode final : public rclcpp::Node {
                        ? diagnostic_msgs::msg::DiagnosticStatus::OK
                        : diagnostic_msgs::msg::DiagnosticStatus::ERROR;
     addDiagnostic(status, "result", status.message);
+    addDiagnostic(status, "paused", paused_ ? "true" : "false");
     addDiagnostic(status, "elapsed_time", simulation_->elapsedTime());
     addDiagnostic(status, "goal_distance", simulation_->goalDistance());
     addDiagnostic(status, "path_length", simulation_->pathLength());
@@ -457,7 +480,7 @@ class NeupanSimNode final : public rclcpp::Node {
       const rclcpp::Time& stamp, std::string ns, int id, int type) const {
     visualization_msgs::msg::Marker marker;
     marker.header.stamp = stamp;
-    marker.header.frame_id = "map";
+    marker.header.frame_id = world_frame_;
     marker.ns = std::move(ns);
     marker.id = id;
     marker.type = type;
@@ -565,6 +588,19 @@ class NeupanSimNode final : public rclcpp::Node {
     robot.scale.y = cfg.robot_width;
     robot.scale.z = 0.2;
     robot.color.g = 0.8F;
+    if (!cfg.robot_vertices.empty()) {
+      robot.type = visualization_msgs::msg::Marker::TRIANGLE_LIST;
+      robot.scale.x = robot.scale.y = robot.scale.z = 1.0;
+      for (std::size_t i = 1; i + 1 < cfg.robot_vertices.size(); ++i) {
+        for (const std::size_t j : {std::size_t(0), i, i + 1}) {
+          geometry_msgs::msg::Point point;
+          point.x = cfg.robot_vertices[j].x;
+          point.y = cfg.robot_vertices[j].y;
+          point.z = 0.1;
+          robot.points.push_back(point);
+        }
+      }
+    }
     array.markers.push_back(std::move(robot));
 
     auto goal = marker(stamp, "goal", 0,
@@ -616,6 +652,9 @@ class NeupanSimNode final : public rclcpp::Node {
   std::vector<Vec2> path_waypoints_;
   std::vector<Vec2> trajectory_;
   std::string scenario_name_;
+  std::string world_frame_, base_frame_, laser_frame_;
+  bool paused_ = false;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_service_;
   Pose2 laser_pose_;
   neupan_sim::Result last_result_ = neupan_sim::Result::Running;
   double physics_rate_ = 100.0;

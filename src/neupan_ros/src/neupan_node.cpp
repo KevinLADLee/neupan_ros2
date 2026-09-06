@@ -755,17 +755,26 @@ class NeuPANNode final : public rclcpp::Node {
   }
 
   void publishRobotMarker() {
-    const auto& cfg = planner_->config();
+    const auto& vertices = planner_->robot().vertices;
     visualization_msgs::msg::Marker m;
     m.header.frame_id = planning_frame_;
     m.header.stamp = now();
     m.id = 0;
-    m.type = visualization_msgs::msg::Marker::CUBE;
+    m.type = visualization_msgs::msg::Marker::TRIANGLE_LIST;
     m.color.a = 1.0;
     m.color.g = 1.0;
-    m.scale.x = cfg.length;
-    m.scale.y = cfg.width;
-    m.scale.z = marker_z_;
+    m.scale.x = m.scale.y = m.scale.z = 1.0;
+    // Convex polygon fan in the robot frame. The pose applies yaw/translation;
+    // explicit asymmetric vertices and the rectangle's axle offset stay intact.
+    for (Eigen::Index i = 1; i + 1 < vertices.cols(); ++i) {
+      for (const Eigen::Index j : {Eigen::Index(0), i, i + 1}) {
+        geometry_msgs::msg::Point point;
+        point.x = vertices(0, j);
+        point.y = vertices(1, j);
+        point.z = marker_z_ * 0.5;
+        m.points.push_back(point);
+      }
+    }
     m.pose.position.x = robot_state_(0);
     m.pose.position.y = robot_state_(1);
     m.pose.orientation = yawToQuat(robot_state_(2));
