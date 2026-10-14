@@ -52,6 +52,14 @@ NRMP::~NRMP() = default;
 NRMP::NRMP(NRMP&&) noexcept = default;
 NRMP& NRMP::operator=(NRMP&&) noexcept = default;
 
+void NRMP::setAppliedControl(const Vec2& command, double elapsed) {
+  if (!command.allFinite() || !std::isfinite(elapsed) || elapsed <= 0.0 ||
+      (command.cwiseAbs().array() > robot_.max_speed.array() + 1e-9).any())
+    throw std::invalid_argument("nrmp: invalid applied command or elapsed time");
+  applied_control_ = command;
+  applied_control_dt_ = elapsed;
+}
+
 void NRMP::buildFaFb(const std::vector<Mat>& mu_list,
                      const std::vector<Mat2X>& lam_list,
                      const std::vector<Mat2X>& point_list,
@@ -179,6 +187,11 @@ void NRMP::assemble(const Mat3X& nom_s, const Mat2X& nom_u, const Mat3X& ref_s,
       setA(row, off_u_ + 2 * t + r, 1.0);
       lb_(row) = -robot_.max_speed(r);
       ub_(row) = robot_.max_speed(r);
+      if (t == 0 && applied_control_) {
+        const double delta = robot_.acce_bound(r) * applied_control_dt_ / robot_.dt;
+        lb_(row) = std::max(lb_(row), (*applied_control_)(r) - delta);
+        ub_(row) = std::min(ub_(row), (*applied_control_)(r) + delta);
+      }
       ++row;
     }
   }

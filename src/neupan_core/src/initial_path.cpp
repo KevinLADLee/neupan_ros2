@@ -291,7 +291,9 @@ InitialPath::NomRef InitialPath::generateNomRefState(
     } else {
       ref_state = findInteractionPoint(ref_state, ref_index,
                                        ref_speed_forward);
-      if (ref_index > n - 1) gear(t) = 0.0;
+      // findInteractionPoint clamps at n-1 (it never returns n). Once
+      // clamped, the endpoint is stationary and its feedforward must be zero.
+      if (ref_index >= n - 1) gear(t) = 0.0;
     }
 
     ref_state(2) = pre_state(2) + wrapToPi(ref_state(2) - pre_state(2));

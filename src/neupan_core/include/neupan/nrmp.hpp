@@ -15,6 +15,7 @@
 #include <OsqpEigen/OsqpEigen.h>
 
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <vector>
 
@@ -86,6 +87,11 @@ class NRMP {
   }
   const NRMPParams& params() const { return p_; }
 
+  // Optional command boundary, held constant across all PAN iterations.
+  // Use the command actually dispatched, not the previous optimizer's u[0].
+  void setAppliedControl(const Vec2& command, double elapsed);
+  void clearAppliedControl() { applied_control_.reset(); }
+
   // Objective in the original cvxpy form, evaluated at a given solution.
   double objective(const Mat3X& s, const Mat2X& u, const Vec& d,
                    const Mat3X& nom_s, const Mat3X& ref_s, const Vec& ref_us,
@@ -111,6 +117,8 @@ class NRMP {
   Eigen::Index a_nonzeros_ = 0;
   bool matrix_structure_initialized_ = false;
   bool initialized_ = false;
+  std::optional<Vec2> applied_control_;
+  double applied_control_dt_ = 0.0;
 };
 
 }  // namespace neupan

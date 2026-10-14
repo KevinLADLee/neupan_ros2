@@ -66,6 +66,17 @@ The node obtains the robot pose from TF, converts obstacle and reference-path
 messages into `planning_frame`, calls `neupan_core`, and publishes the local
 velocity command and planner state.
 
+The standalone executable uses `MultiThreadedExecutor`. Obstacle subscriptions
+have their own mutually exclusive callback group and update a mutex-protected
+cache while planning runs. Each solve uses an immutable observation snapshot;
+goals, paths, and the planning timer remain serialized. A component deployment
+must also use a multithreaded executor to obtain concurrent obstacle ingestion.
+Stopping clears the unexecuted nominal control sequence as well as the last
+output command, while retaining the active goal and path progress.
+
+Planner diagnostics include `solve_duration_ms`, `obstacle_age_at_start_ms`,
+and `obstacle_age_at_publish_ms` to distinguish optimizer runtime from input age.
+
 #### Parameters
 
 | Name | Type | Default | Description |
@@ -75,11 +86,18 @@ velocity command and planner state.
 | `planning_frame` | `string` | `odom` | Common coordinate frame for planning, paths, and markers |
 | `base_frame` | `string` | `base_link` | Robot body frame used for the TF pose lookup |
 | `control_rate` | `double` | `50.0` | Planning timer frequency in Hz |
+| `limit_command_acceleration` | `bool` | `false` | Bound changes between actual outputs using planner `max_acce`; stops bypass the limiter |
+| `goal_slowdown_distance` | `double` | `0.0` | If positive, reduce reference speed within this distance and latch direct-goal arrival at `ipath.arrive_threshold` |
+| `turn_slowdown` | `bool` | `false` | Scale forward output using the heading change along the optimized trajectory; yaw output is retained |
+| `turn_lookahead` | `double` | `1.0` | Heading lookahead along the optimized trajectory in seconds; must be positive |
+| `turn_slowdown_start_angle` | `double` | `0.17453292519943295` | Heading difference in radians at which forward slowdown begins (10 degrees) |
+| `turn_slowdown_stop_angle` | `double` | `0.5235987755982988` | Heading difference in radians at which the forward target becomes zero (30 degrees); stops still bypass the command limiter |
 | `pose_timeout` | `double` | `0.5` | Maximum robot TF age in seconds; must be finite and positive |
 | `include_initial_path_direction` | `bool` | `false` | Use the orientation of each input path pose instead of the XY tangent |
 | `obstacle_source` | `string` | `auto` | `scan`, `pointcloud`, or `auto`; `auto` prefers a fresh point cloud |
 | `scan_timeout` | `double` | `0.5` | Maximum LaserScan age in seconds |
 | `pointcloud_timeout` | `double` | `0.5` | Maximum PointCloud2 age in seconds |
+| `obstacle_tf_timeout` | `double` | `0.0` | Bounded wait for timestamped obstacle TF, in seconds; valid range is [0, 0.1] |
 | `compensate_obstacle_latency` | `bool` | `true` | Propagate dynamic points by velocity times observation age |
 | `scan_angle_min` | `double` | `-3.14` | Minimum accepted LaserScan angle in radians |
 | `scan_angle_max` | `double` | `3.14` | Maximum accepted LaserScan angle in radians |
@@ -117,9 +135,10 @@ ros2 launch neupan_ros neupan.launch.py pose_timeout:=0.3
 | `neupan_waypoints` | `nav_msgs/msg/Path` | Reliable / Volatile / Keep Last (10) | Sparse waypoints; the current robot pose is prepended |
 | `neupan_goal` | `geometry_msgs/msg/PoseStamped` | Reliable / Volatile / Keep Last (10) | Goal used to generate a straight reference path |
 
-The most recently received reference-path input is active. Its original frame is
-retained and the path is transformed into `planning_frame` at each control
-cycle.
+The most recently received reference input is active. Paths and waypoints retain
+their original frame and are transformed into `planning_frame` each control cycle.
+A single goal is transformed once when accepted and remains fixed until a different
+goal or path is received. Repeated identical goals do not restart an arrived task.
 
 Supported PointCloud2 field layouts are:
 
@@ -162,7 +181,7 @@ The node looks up these transforms:
 
 - latest `planning_frame <- base_frame` for the robot pose
 - timestamped `planning_frame <- sensor_frame` for LaserScan and PointCloud2
-- latest `planning_frame <- reference_frame` for path and goal messages
+- latest `planning_frame <- reference_frame` each cycle for paths, once on acceptance for goals
 
 If a safety-critical input cannot be transformed, the node publishes a zero
 velocity command. The former `map_frame` parameter is not supported; use

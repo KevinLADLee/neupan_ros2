@@ -90,6 +90,9 @@ class NeuPANPlanner {
 
   void reset();
   void setReferenceSpeed(double speed) { ref_speed_ = speed; }
+  void setAppliedControl(const Vec2& command, double elapsed) {
+    pan_.nrmp().setAppliedControl(command, elapsed);
+  }
   // Override the internal nominal control sequence (testing / bridging).
   void setCurVelArray(const Mat2X& u) { cur_vel_array_ = u; }
   void updateInitialPathFromGoal(const Vec3& start, const Vec3& goal) {

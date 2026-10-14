@@ -14,9 +14,11 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <utility>
@@ -38,6 +40,7 @@
 #include "neupan_ros/laser_scan_preprocessor.hpp"
 #include "neupan_ros/obstacle_observation.hpp"
 #include "neupan_ros/pointcloud_preprocessor.hpp"
+#include "neupan_ros/turn_slowdown.hpp"
 
 using namespace std::chrono_literals;
 
@@ -110,12 +113,28 @@ class NeuPANNode final : public rclcpp::Node {
     obstacle_source_ = parseObstacleSource(
         declare_parameter<std::string>("obstacle_source", "auto"));
     pointcloud_timeout_ = declare_parameter<double>("pointcloud_timeout", 0.5);
+    obstacle_tf_timeout_ = declare_parameter<double>("obstacle_tf_timeout", 0.0);
     compensate_obstacle_latency_ =
         declare_parameter<bool>("compensate_obstacle_latency", true);
     solver_fail_grace_ = declare_parameter<int>("solver_fail_grace", 5);
     stall_speed_ = declare_parameter<double>("stall_speed", 0.02);
     stall_timeout_ = declare_parameter<double>("stall_timeout", 3.0);
     const double rate = declare_parameter<double>("control_rate", 50.0);
+    limit_command_acceleration_ = declare_parameter<bool>("limit_command_acceleration", false);
+    goal_slowdown_distance_ = declare_parameter<double>("goal_slowdown_distance", 0.0);
+    turn_slowdown_ = declare_parameter<bool>("turn_slowdown", false);
+    turn_lookahead_ = declare_parameter<double>("turn_lookahead", 1.0);
+    turn_start_angle_ = declare_parameter<double>("turn_slowdown_start_angle", 0.17453292519943295);
+    turn_stop_angle_ = declare_parameter<double>("turn_slowdown_stop_angle", 0.5235987755982988);
+    if (!std::isfinite(turn_lookahead_) || turn_lookahead_ <= 0.0 ||
+        !std::isfinite(turn_start_angle_) || !std::isfinite(turn_stop_angle_) ||
+        turn_start_angle_ < 0.0 || turn_stop_angle_ <= turn_start_angle_ ||
+        turn_stop_angle_ > 3.141592653589793)
+      throw std::runtime_error("invalid turn slowdown lookahead or angles");
+    if (!std::isfinite(rate) || rate <= 0.0 || !std::isfinite(goal_slowdown_distance_) ||
+        goal_slowdown_distance_ < 0.0)
+      throw std::runtime_error("invalid control_rate or goal_slowdown_distance");
+    command_period_ = 1.0 / rate;
 
     if (planning_frame_.empty() || base_frame_.empty())
       throw std::runtime_error(
@@ -126,6 +145,9 @@ class NeuPANNode final : public rclcpp::Node {
         pointcloud_timeout_ <= 0.0)
       throw std::runtime_error(
           "scan_downsample must be >= 1 and obstacle timeouts must be > 0");
+    if (!std::isfinite(obstacle_tf_timeout_) || obstacle_tf_timeout_ < 0.0 ||
+        obstacle_tf_timeout_ > 0.1)
+      throw std::runtime_error("obstacle_tf_timeout must be finite and within [0, 0.1] seconds");
 
     if (config_file.empty())
       throw std::runtime_error("parameter 'config_file' is required");
@@ -152,12 +174,16 @@ class NeuPANNode final : public rclcpp::Node {
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_clock());
     tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
 
+    obstacle_callbacks_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    rclcpp::SubscriptionOptions obstacle_options;
+    obstacle_options.callback_group = obstacle_callbacks_;
+
     if (obstacle_source_ != ObstacleSource::PointCloud) {
       scan_sub_ = create_subscription<sensor_msgs::msg::LaserScan>(
           "scan", rclcpp::SensorDataQoS(),
           [this](sensor_msgs::msg::LaserScan::ConstSharedPtr msg) {
             scanCallback(*msg);
-          });
+          }, obstacle_options);
     }
     if (obstacle_source_ != ObstacleSource::Scan) {
       pointcloud_sub_ =
@@ -165,7 +191,7 @@ class NeuPANNode final : public rclcpp::Node {
               "obstacles", rclcpp::SensorDataQoS(),
               [this](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) {
                 pointCloudCallback(*msg);
-              });
+              }, obstacle_options);
     }
     path_sub_ = create_subscription<nav_msgs::msg::Path>(
         "initial_path", 10, [this](nav_msgs::msg::Path::ConstSharedPtr msg) {
@@ -229,7 +255,10 @@ class NeuPANNode final : public rclcpp::Node {
                                            const rclcpp::Time& stamp) {
     if (target == source) return neupan::Vec3::Zero();
     try {
-      const auto tfs = tf_buffer_->lookupTransform(target, source, stamp);
+      // TF and sensor messages use independent DDS channels. Allow a bounded
+      // wait for the same timestamp; never substitute a latest transform.
+      const auto tfs = tf_buffer_->lookupTransform(
+          target, source, stamp, rclcpp::Duration::from_seconds(obstacle_tf_timeout_));
       return neupan::Vec3(tfs.transform.translation.x,
                           tfs.transform.translation.y,
                           quatToYaw(tfs.transform.rotation));
@@ -266,7 +295,33 @@ class NeuPANNode final : public rclcpp::Node {
   }
 
   // Publishing nothing is not a stop: consumers hold the last command.
+  void resetCommand() {
+    last_command_.setZero();
+    // StopMove invalidates the previous predicted motion. Reusing that
+    // unexecuted control sequence after a halt can make the next linearized
+    // solve repeatedly fail even though the applied-command boundary is zero.
+    planner_->setCurVelArray(neupan::Mat2X::Zero(2, planner_->config().receding));
+    turn_speed_scale_ = 1.0;
+    last_command_time_ = std::chrono::steady_clock::now();
+  }
+
+  neupan::Vec2 limitCommand(const neupan::Vec2& requested) {
+    const auto now_steady = std::chrono::steady_clock::now();
+    const double dt = std::clamp(
+        std::chrono::duration<double>(now_steady - last_command_time_).count(),
+        0.0, command_period_);
+    neupan::Vec2 command = requested;
+    if (limit_command_acceleration_) {
+      const neupan::Vec2 delta = planner_->config().max_acce * dt;
+      command = requested.cwiseMax(last_command_ - delta).cwiseMin(last_command_ + delta);
+    }
+    last_command_ = command;
+    last_command_time_ = now_steady;
+    return command;
+  }
+
   void halt(const char* why) {
+    resetCommand();
     vel_pub_->publish(geometry_msgs::msg::Twist());
     publishArrive(false);
     publishStatus(diagnostic_msgs::msg::DiagnosticStatus::WARN, why, {});
@@ -288,11 +343,23 @@ class NeuPANNode final : public rclcpp::Node {
     }
 
     std::string obstacle_error;
-    const TimedObservation* active = selectObstacleInput(obstacle_error);
-    if (!active) {
+    TimedObservation snapshot;
+    bool have_observation = false;
+    {
+      std::lock_guard<std::mutex> lock(obstacle_mutex_);
+      if (const auto* input = selectObstacleInput(obstacle_error)) {
+        snapshot = *input;
+        have_observation = true;
+      }
+    }
+    if (!have_observation) {
       halt(obstacle_error.c_str());
       return;
     }
+    // A solve owns an immutable copy. Sensor callbacks keep updating the
+    // latest input on another executor thread while the optimizer is busy.
+    const TimedObservation* active = &snapshot;
+    obstacle_age_at_start_ms_ = (now() - active->observed_at).seconds() * 1000.0;
 
     auto& ipath = planner_->ipath();
     if (ipath.hasConfiguredWaypoints() && !ipath.hasPath())
@@ -320,9 +387,26 @@ class NeuPANNode final : public rclcpp::Node {
           get_logger(), *get_clock(), 1000,
           "no obstacle points, only path tracking will be performed");
 
+    // The terminal pose remains fixed after accepting a goal, including goals
+    // originally expressed in a moving body frame. Slow before the stop gate.
+    planner_->setReferenceSpeed(planner_->config().ref_speed);
+    if (applied_reference_source_ == ReferenceSource::Goal && goal_slowdown_distance_ > 0.0) {
+      const double distance = (robot_state_.head<2>() - last_reference_goal_.head<2>()).norm();
+      if (distance <= planner_->config().ipath.arrive_threshold)
+        planner_->ipath().arrive_flag_ = true;
+      planner_->setReferenceSpeed(planner_->config().ref_speed *
+          std::min(1.0, distance / goal_slowdown_distance_));
+    }
+
+    if (limit_command_acceleration_)
+      planner_->setAppliedControl(last_command_, command_period_);
     neupan::NeuPANPlanner::Info info;
+    const auto solve_start = std::chrono::steady_clock::now();
     const neupan::Vec2 action = planner_->forward(
         robot_state_, *active_points, active->observation.velocities, info);
+    solve_duration_ms_ = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - solve_start).count();
+    obstacle_age_at_publish_ms_ = (now() - active->observed_at).seconds() * 1000.0;
 
     if (info.arrive)
       RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000,
@@ -334,8 +418,17 @@ class NeuPANNode final : public rclcpp::Node {
 
     geometry_msgs::msg::Twist twist;
     if (!info.stop && !info.arrive && !solverGaveUp(info)) {
-      twist.linear.x = action(0);
-      twist.angular.z = action(1);
+      turn_speed_scale_ = turn_slowdown_ ? turnSpeedScale(
+          info.opt_s, robot_state_(2), planner_->config().step_time,
+          turn_lookahead_, turn_start_angle_, turn_stop_angle_) : 1.0;
+      neupan::Vec2 requested = action;
+      requested(0) *= turn_speed_scale_;
+      const auto limited = limitCommand(requested);
+      twist.linear.x = limited(0);
+      twist.angular.z = limited(1);
+    } else {
+      // Arrival, stale input and collision stops must bypass the slew limiter.
+      resetCommand();
     }
     vel_pub_->publish(twist);
     publishArrive(info.arrive);
@@ -496,6 +589,10 @@ class NeuPANNode final : public rclcpp::Node {
          {"planning_frame", planning_frame_},
          {"reference_frame", referenceFrame()},
          {"stalled", stalled_ ? "true" : "false"},
+         {"turn_speed_scale", std::to_string(turn_speed_scale_)},
+         {"solve_duration_ms", std::to_string(solve_duration_ms_)},
+         {"obstacle_age_at_start_ms", std::to_string(obstacle_age_at_start_ms_)},
+         {"obstacle_age_at_publish_ms", std::to_string(obstacle_age_at_publish_ms_)},
          {"cmd_v", std::to_string(cmd.linear.x)},
          {"cmd_w", std::to_string(cmd.angular.z)}});
   }
@@ -513,6 +610,8 @@ class NeuPANNode final : public rclcpp::Node {
       if (!planning_from_lidar) return;
       neupan_ros::transformObservation(observation, *planning_from_lidar);
     }
+    std::lock_guard<std::mutex> lock(obstacle_mutex_);
+    if (scan_observation_.seen && observation_time < scan_observation_.observed_at) return;
     scan_observation_.observation = std::move(observation);
     scan_observation_.received_at = now();
     scan_observation_.observed_at = observation_time;
@@ -547,6 +646,8 @@ class NeuPANNode final : public rclcpp::Node {
           "discarded %zu non-finite or directionless PointCloud2 points",
           observation.discarded_points);
     }
+    std::lock_guard<std::mutex> lock(obstacle_mutex_);
+    if (pointcloud_observation_.seen && observation_time < pointcloud_observation_.observed_at) return;
     pointcloud_observation_.max_speed =
         observation.velocities.cols() == 0
             ? 0.0
@@ -612,8 +713,12 @@ class NeuPANNode final : public rclcpp::Node {
 
   void goalCallback(const geometry_msgs::msg::PoseStamped& msg) {
     if (!requireFrame(msg.header.frame_id, "neupan_goal")) return;
+    if (reference_source_ == ReferenceSource::Goal &&
+        reference_goal_.header.frame_id == msg.header.frame_id && reference_goal_.pose == msg.pose)
+      return;
     reference_goal_ = msg;
     reference_source_ = ReferenceSource::Goal;
+    goal_pending_ = true;
   }
 
   std::string referenceFrame() const {
@@ -627,6 +732,7 @@ class NeuPANNode final : public rclcpp::Node {
 
   bool syncReferenceInput() {
     if (reference_source_ == ReferenceSource::None) return true;
+    if (reference_source_ == ReferenceSource::Goal && !goal_pending_) return true;
 
     const std::string& source_frame =
         reference_source_ == ReferenceSource::Goal
@@ -643,6 +749,7 @@ class NeuPANNode final : public rclcpp::Node {
           applied_reference_source_ == ReferenceSource::Goal &&
           (goal.head<2>() - last_reference_goal_.head<2>()).norm() <= 1e-6 &&
           std::abs(normalizeAngle(goal(2) - last_reference_goal_(2))) <= 1e-6;
+      goal_pending_ = false;
       if (unchanged) return true;
 
       RCLCPP_INFO(get_logger(),
@@ -791,7 +898,19 @@ class NeuPANNode final : public rclcpp::Node {
   double marker_size_, marker_z_;
   neupan_ros::LaserScanPreprocessorConfig scan_config_;
   bool include_initial_path_direction_;
+  bool limit_command_acceleration_ = false;
+  double command_period_ = 0.02;
+  double goal_slowdown_distance_ = 0.0;
+  bool turn_slowdown_ = false;
+  double turn_lookahead_ = 1.0;
+  double turn_start_angle_ = 0.17453292519943295;
+  double turn_stop_angle_ = 0.5235987755982988;
+  double turn_speed_scale_ = 1.0;
+  neupan::Vec2 last_command_ = neupan::Vec2::Zero();
+  std::chrono::steady_clock::time_point last_command_time_ = std::chrono::steady_clock::now();
+  bool goal_pending_ = false;
   double scan_timeout_, pointcloud_timeout_, stall_speed_, stall_timeout_;
+  double obstacle_tf_timeout_ = 0.0;
   bool compensate_obstacle_latency_ = true;
   int solver_fail_grace_;
 
@@ -809,6 +928,11 @@ class NeuPANNode final : public rclcpp::Node {
   bool have_state_ = false;
   TimedObservation scan_observation_;
   TimedObservation pointcloud_observation_;
+  std::mutex obstacle_mutex_;
+  rclcpp::CallbackGroup::SharedPtr obstacle_callbacks_;
+  double solve_duration_ms_ = 0.0;
+  double obstacle_age_at_start_ms_ = 0.0;
+  double obstacle_age_at_publish_ms_ = 0.0;
   neupan::Mat2X compensated_obstacle_points_ = neupan::Mat2X(2, 0);
   std::size_t active_obstacle_count_ = 0;
   double active_max_obstacle_speed_ = 0.0;

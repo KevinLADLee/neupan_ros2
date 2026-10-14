@@ -24,6 +24,39 @@ namespace {
 const std::string kData = NEUPAN_TEST_DATA_DIR;
 }
 
+TEST(Nrmp, FirstControlUsesAppliedCommandAcrossRepeatedSolves) {
+  const int T = 12;
+  const Robot robot = Robot::diffRectangle(T, .1, Vec2(.8, .3), Vec2(.2, .2), .94, .55);
+  NRMPParams params;
+  params.max_num = 0;
+  NRMP nrmp(robot, params);
+  Mat3X nominal = Mat3X::Zero(3, T + 1);
+  Mat2X controls = Mat2X::Zero(2, T);
+  Mat3X reference = nominal;
+  reference.row(0).setConstant(1.0);
+  reference.row(2).setConstant(1.0);
+  Vec speeds = Vec::Constant(T, .5);
+  for (const Vec2 applied : {Vec2(0, 0), Vec2(.15, .08), Vec2(-.1, -.08)}) {
+    nrmp.setAppliedControl(applied, .05);
+    for (int iteration = 0; iteration < 3; ++iteration) {
+      const auto result = nrmp.solve(nominal, controls, reference, speeds, {}, {});
+      ASSERT_TRUE(result.success);
+      EXPECT_LE((result.u.col(0) - applied).cwiseAbs().maxCoeff(), .0105);
+      EXPECT_GT(result.u(1, T - 1), result.u(1, 0) + .03);
+      for (int t = 1; t < T; ++t)
+        EXPECT_LE((result.u.col(t) - result.u.col(t - 1)).cwiseAbs().maxCoeff(), .0205);
+      nominal = result.s;
+      controls = result.u;  // A PAN iteration must not advance the applied command.
+    }
+  }
+  EXPECT_THROW(nrmp.setAppliedControl(Vec2(0, 0), 0), std::invalid_argument);
+  EXPECT_THROW(nrmp.setAppliedControl(Vec2(1, 0), .05), std::invalid_argument);
+  nrmp.clearAppliedControl();
+  const auto free = nrmp.solve(nominal, controls, reference, speeds, {}, {});
+  ASSERT_TRUE(free.success);
+  EXPECT_GT(free.u(0, 0), .1);
+}
+
 // Replays every dumped NRMP call (each frame, each PAN iteration) against
 // the original cvxpy/ECOS reference. In addition to the deployed action and
 // objective, retain bounds on the complete primal solution and feasibility.

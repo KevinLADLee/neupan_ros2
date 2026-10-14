@@ -42,7 +42,8 @@ ament_target_dependencies(neupan_node_component
   visualization_msgs std_msgs diagnostic_msgs tf2 tf2_ros)
 rclcpp_components_register_node(neupan_node_component
   PLUGIN "neupan_ros::NeuPANNode"
-  EXECUTABLE neupan_node)
+  EXECUTABLE neupan_node
+  EXECUTOR MultiThreadedExecutor)
 
 # Minimal reference global planner (A* on map -> initial_path) for demos.
 add_executable(astar_global_node src/astar_global_node.cpp)
@@ -59,6 +60,8 @@ install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(class_loader REQUIRED)
+  ament_add_gtest(test_turn_slowdown test/test_turn_slowdown.cpp)
+  target_link_libraries(test_turn_slowdown neupan_obstacle_preprocessing)
   ament_add_gtest(test_pointcloud_preprocessor test/test_pointcloud_preprocessor.cpp)
   target_link_libraries(test_pointcloud_preprocessor neupan_obstacle_preprocessing)
   ament_target_dependencies(test_pointcloud_preprocessor sensor_msgs)

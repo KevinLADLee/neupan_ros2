@@ -28,9 +28,10 @@ def executable(package, name):
 
 
 class Validation(Node):
-    def __init__(self, cases, output, shared=False):
+    def __init__(self, cases, output, shared=False, obstacle_source='pointcloud', solver_fail_grace=5):
         super().__init__('neupan_validation')
         self.cases, self.output, self.shared = cases, output, shared
+        self.obstacle_source, self.solver_fail_grace = obstacle_source, solver_fail_grace
         self.processes, self.logs, self.subscriptions_ = [], [], []
         self.states, self.ready, self.unsolved, self.start_clients = {}, set(), {}, {}
         self.started = False
@@ -93,7 +94,9 @@ class Validation(Node):
                         '-r', f'__ns:=/{name}', '-p', f'config_file:={planner_path}',
                         '-p', f'dune_checkpoint:={case["checkpoint"]}',
                         '-p', f'planning_frame:={case["simulator"]["world_frame"]}', '-p', f'base_frame:={name}/base_link',
-                        '-p', 'control_rate:=20.0', '-p', 'obstacle_source:=pointcloud',
+                        '-p', 'control_rate:=20.0', '-p', f'obstacle_source:={self.obstacle_source}',
+                        '-p', f'solver_fail_grace:={self.solver_fail_grace}',
+                        '-p', 'scan_range_min:=0.1', '-p', 'scan_range_max:=8.0',
                         '-p', 'pose_timeout:=1.0', '-p', 'pointcloud_timeout:=1.0'], f'{name}.planner.log')
 
         if self.shared:
@@ -149,6 +152,7 @@ class Validation(Node):
                              total_peer_hits=int(state['total_peer_hits']) if 'total_peer_hits' in state else None))
         passed = not error and all(row['passed'] for row in rows)
         report = dict(passed=passed, error=error, cases=rows,
+                      obstacle_source=self.obstacle_source, solver_fail_grace=self.solver_fail_grace,
                       mode='shared' if self.shared else 'replicas',
                       note='Shared world with mutual sensing and collisions.' if self.shared else
                            'Independent scene copies; wall-clock timing includes concurrent CPU load.')
@@ -208,6 +212,8 @@ def main():
     parser.add_argument('--shared', action='store_true', help='One world with interacting robot bodies')
     parser.add_argument('--scenario', help='Shared scenario name (all its robots participate)')
     parser.add_argument('--startup-timeout', type=float, default=30.0)
+    parser.add_argument('--obstacle-source', choices=['scan', 'pointcloud'], default='pointcloud')
+    parser.add_argument('--solver-fail-grace', type=int, default=5)
     args = parser.parse_args()
     output = args.output.resolve()
     if output.exists() and any(output.iterdir()):
@@ -224,7 +230,7 @@ def main():
     (output / 'resolved.json').write_text(json.dumps(cases, indent=2))
     rviz_path = write_rviz(cases, output)
     rclpy.init(args=[])
-    node = Validation(cases, output, args.shared)
+    node = Validation(cases, output, args.shared, args.obstacle_source, args.solver_fail_grace)
     error = None
     try:
         node.launch_cases()

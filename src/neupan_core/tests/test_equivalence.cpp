@@ -214,3 +214,38 @@ TEST(Equivalence, SparseExternalPathMatchesUpstreamReferenceProgress) {
       EXPECT_NEAR(ref.ref_s(0, t), x > 5.0 ? 10.0 : 0.1 * t, 1e-12);
   }
 }
+
+TEST(Equivalence, TerminalReferenceStopsAtLowAndCruiseSpeeds) {
+  const Robot robot = testRobot(20);
+  for (double speed : {0.25, 0.5}) {
+    SCOPED_TRACE(speed);
+    InitialPath path(robot, 0.5, {});
+    path.updateInitialPathFromGoal(Vec3(0,0,0),Vec3(1,0,0));
+    path.point_index_ = static_cast<int>(path.initialPath().size())-1;
+    // Outside arrival tolerance: terminal references must allow correcting
+    // an overshoot / lateral error without demanding forward cruise speed.
+    const Vec3 state(1.1,0.2,0);
+    EXPECT_FALSE(path.checkArrive(state));
+    const auto ref = path.generateNomRefState(state,Mat2X::Zero(2,robot.T),speed);
+    EXPECT_NEAR(ref.ref_us.norm(),0.0,1e-12);
+    for (int t=0;t<=robot.T;++t)
+      EXPECT_NEAR((ref.ref_s.col(t).head<2>()-Vec2(1,0)).norm(),0.0,1e-12);
+  }
+}
+
+TEST(Equivalence, ReferenceSpeedVanishesAfterTerminalPositionIsReached) {
+  const Robot robot = testRobot(20);
+  InitialPath path(robot,0.5,{});
+  path.updateInitialPathFromGoal(Vec3(0,0,0),Vec3(1,0,0));
+  path.point_index_ = static_cast<int>(path.initialPath().size())-3;
+  const auto ref = path.generateNomRefState(Vec3(.9,0,0),Mat2X::Zero(2,robot.T),.25);
+  EXPECT_GT(ref.ref_us(0),0.0);
+  int stopped = 0;
+  for (int t=0;t<robot.T;++t) {
+    if ((ref.ref_s.col(t).head<2>()-Vec2(1,0)).norm()<1e-9) {
+      EXPECT_NEAR(ref.ref_us(t),0.0,1e-12);
+      ++stopped;
+    }
+  }
+  EXPECT_GT(stopped,10);
+}

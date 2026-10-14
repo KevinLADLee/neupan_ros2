@@ -54,7 +54,7 @@ class PAN {
                  const Vec& ref_us, const Mat2X& points,
                  const Mat2X& point_velocities = Mat2X(2, 0));
 
-  void reset() { prev_.reset(); }
+  void reset() { prev_.reset(); nrmp_.clearAppliedControl(); }
   NRMP& nrmp() { return nrmp_; }
 
  private:

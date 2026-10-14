@@ -53,14 +53,14 @@ MLP MLP::fromTensors(const TensorFile& tf) {
       cur.W = m.cast<float>();
       pending = true;
     } else if (rest == "linear.bias") {
-      cur.b = m.cast<float>().reshaped().eval();
+      cur.b = Eigen::Map<const Vec>(m.data(), m.size()).cast<float>();
       pending = true;
     } else if (rest == "ln.gamma") {
       cur.type = LayerType::LayerNorm;
-      cur.gamma = m.cast<float>().reshaped().eval();
+      cur.gamma = Eigen::Map<const Vec>(m.data(), m.size()).cast<float>();
       pending = true;
     } else if (rest == "ln.beta") {
-      cur.beta = m.cast<float>().reshaped().eval();
+      cur.beta = Eigen::Map<const Vec>(m.data(), m.size()).cast<float>();
       pending = true;
     } else if (rest == "tanh") {
       cur.type = LayerType::Tanh;

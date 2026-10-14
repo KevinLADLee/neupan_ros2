@@ -40,7 +40,7 @@ the invariant; mixing robot-frame points with a map-frame state is invalid.
 | `obstacles` | non-empty sensor/source frame | used directly when frames match; otherwise positions and velocities are transformed at `header.stamp` |
 | `initial_path` | any non-empty fixed frame | retained and continuously transformed with the latest TF; at least two poses |
 | `neupan_waypoints` | any non-empty fixed frame | retained and continuously transformed into `planning_frame` |
-| `neupan_goal` | any non-empty fixed frame | retained and continuously transformed into `planning_frame` |
+| `neupan_goal` | any non-empty frame with available TF | transformed once on acceptance and fixed in `planning_frame` |
 | A* `map` | any non-empty fixed frame | uses `OccupancyGrid.header.frame_id` and supports a rotated map origin |
 | A* `goal_pose` | any non-empty fixed frame | transformed into the current OccupancyGrid frame with the latest TF |
 
@@ -53,11 +53,12 @@ non-zero timestamp requires a matching historical TF. Missing TF causes that
 sensor frame to be discarded. A sensor already in `planning_frame` skips the
 TF lookup and matrix transform.
 
-Paths, waypoints and goals are persistent reference geometry rather than sensor
-samples. The node retains their original-frame data and updates their projection
-into `planning_frame` using the latest TF during control. A changing SLAM
-`map -> odom` transform therefore cannot leave a stale one-shot conversion.
-Empty frame IDs are always rejected.
+Paths and waypoints retain their original-frame data and update their projection
+into `planning_frame` using the latest TF during control. Single goals are fixed
+in `planning_frame` when accepted, so a body-frame goal cannot move along with
+the robot. Repeated identical goals do not restart an arrived task. For a goal
+that must follow changes in a global `map -> odom` transform, publish an updated
+global reference path. Empty frame IDs are always rejected.
 
 PointCloud2 XYZIV means `x/y/z/intensity/vx/vy`. Position and velocity are both
 expressed in the message frame. The ROS adapter applies rotation and translation

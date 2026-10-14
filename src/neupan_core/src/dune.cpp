@@ -41,7 +41,7 @@ void checkCheckpointGeometry(const std::string& path, const TensorFile& tf,
   const bool shape_ok =
       mG.rows() == G.rows() && mG.cols() == G.cols() && mh.size() == h.size();
   if (!shape_ok || (mG - G).cwiseAbs().maxCoeff() > 1e-6 ||
-      (mh.reshaped() - h).cwiseAbs().maxCoeff() > 1e-6)
+      (Eigen::Map<const Vec>(mh.data(), mh.size()) - h).cwiseAbs().maxCoeff() > 1e-6)
     throw std::runtime_error(
         "dune: " + path +
         " was trained for a different robot footprint than the one "

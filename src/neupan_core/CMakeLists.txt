@@ -84,7 +84,14 @@ endif()
 
 install(TARGETS neupan EXPORT neupanTargets)
 install(DIRECTORY include/ DESTINATION include)
-install(DIRECTORY models/ DESTINATION share/neupan_core/models)
+# Deployment models may link to another workspace package. Copy their content:
+# preserving a source-relative symlink under install/ leaves a dangling model.
+file(GLOB model_files CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/models/*")
+foreach(model_file IN LISTS model_files)
+  get_filename_component(model_name "${model_file}" NAME)
+  get_filename_component(model_source "${model_file}" REALPATH)
+  install(FILES "${model_source}" DESTINATION share/neupan_core/models RENAME "${model_name}")
+endforeach()
 
 install(FILES package.xml DESTINATION share/neupan_core)
 
