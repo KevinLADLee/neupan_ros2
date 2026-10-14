@@ -1,0 +1,92 @@
+{
+  "states": {
+    "alpha": {
+      "result": "goal_reached",
+      "paused": "false",
+      "elapsed_time": "14.105000",
+      "goal_distance": "0.148861",
+      "path_length": "7.452710",
+      "clearance": "0.899236",
+      "minimum_clearance": "0.278369",
+      "actual_linear_speed": "0.000000",
+      "actual_angular_speed": "0.000000",
+      "command_age": "0.000000",
+      "scan_hits": "319",
+      "peer_count": "2",
+      "peer_hits": "14",
+      "total_peer_hits": "31093"
+    },
+    "beta": {
+      "result": "goal_reached",
+      "paused": "false",
+      "elapsed_time": "9.555000",
+      "goal_distance": "0.149916",
+      "path_length": "4.751870",
+      "clearance": "0.840579",
+      "minimum_clearance": "0.215850",
+      "actual_linear_speed": "0.000000",
+      "actual_angular_speed": "0.000000",
+      "command_age": "0.000000",
+      "scan_hits": "361",
+      "peer_count": "2",
+      "peer_hits": "18",
+      "total_peer_hits": "41092"
+    },
+    "gamma": {
+      "result": "goal_reached",
+      "paused": "false",
+      "elapsed_time": "13.030000",
+      "goal_distance": "0.148093",
+      "path_length": "7.472585",
+      "clearance": "1.088854",
+      "minimum_clearance": "0.215850",
+      "actual_linear_speed": "0.000000",
+      "actual_angular_speed": "0.000000",
+      "command_age": "0.000000",
+      "scan_hits": "341",
+      "peer_count": "2",
+      "peer_hits": "15",
+      "total_peer_hits": "33061"
+    }
+  },
+  "circles": {
+    "alpha": [
+      [
+        0,
+        -1.5,
+        1.1
+      ],
+      [
+        1,
+        2.8,
+        -2.0
+      ],
+      [
+        2,
+        3.3309999999999738,
+        -1.5
+      ]
+    ],
+    "beta": [],
+    "gamma": []
+  },
+  "dynamic_displacement": 0.6334999999999704,
+  "robot_dimensions_m": {
+    "alpha": [
+      0.9,
+      0.5
+    ],
+    "beta": [
+      0.612,
+      0.58
+    ],
+    "gamma": [
+      0.5,
+      0.5
+    ]
+  },
+  "world_dimensions_m": [
+    10,
+    7
+  ]
+}

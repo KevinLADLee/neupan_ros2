@@ -1,0 +1,49 @@
+# Compact trapezoid: 0.90 x 0.50 m. Use diff_compact_polygon.bin.
+receding: 10
+step_time: 0.1
+ref_speed: 0.5
+collision_threshold: 0.1
+robot:
+  kinematics: diff
+  max_speed:
+  - 1.0
+  - 1.0
+  max_acce:
+  - 1.0
+  - 2.0
+  vertices:
+  - - -0.2
+    - -0.25
+  - - -0.45
+    - 0.25
+  - - 0.45
+    - 0.25
+  - - 0.2
+    - -0.25
+pan:
+  iter_num: 2
+  dune_max_num: 100
+  nrmp_max_num: 10
+  iter_threshold: 0.1
+  dune_checkpoint: ''
+adjust:
+  q_s: 1.0
+  p_u: 1.0
+  eta: 15.0
+  d_min: 0.05
+  d_max: 0.3
+train:
+  label_method: ecos
+  data_size: 40000
+  data_range:
+  - -8
+  - -8
+  - 8
+  - 8
+  epoch: 1500
+  batch_size: 1024
+  lr: 0.0005
+  decay_freq: 500
+  valid_freq: 25
+  save_freq: 500
+  patience: 20

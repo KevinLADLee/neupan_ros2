@@ -1,0 +1,48 @@
+{
+  "legacy_geometry_unverified": true,
+  "geometry": {
+    "G": [
+      [
+        0.0,
+        -1.6
+      ],
+      [
+        2.0,
+        -1.0
+      ],
+      [
+        0.0,
+        3.6
+      ],
+      [
+        -2.0,
+        -1.0
+      ]
+    ],
+    "h": [
+      [
+        1.6
+      ],
+      [
+        2.6
+      ],
+      [
+        3.6
+      ],
+      [
+        2.6
+      ]
+    ]
+  },
+  "sha256": "cbcf9daf500e5b5e49e3988fce6c291f036755b6765920b54cb95bc91204cd77",
+  "format": "NPTF",
+  "cpp_verification": "passed",
+  "cpp_output": "points=1024 max_mu_error=2.38419e-07 max_distance_error=1.04646e-05\n",
+  "source": {
+    "repository": "hanruihua/NeuPAN",
+    "commit": "f5ae6d8",
+    "checkpoint": "example/model/polygon_robot/model_5000.pth",
+    "sha256": "b06f82357214d77436495363a98fff1ea3c26275f3f959df86e058f84e98bbc2",
+    "geometry_config": "example/polygon_robot/diff/planner.yaml"
+  }
+}

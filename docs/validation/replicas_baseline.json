@@ -1,0 +1,151 @@
+{
+  "passed": false,
+  "error": null,
+  "cases": [
+    {
+      "case": "square_open",
+      "robot": "square",
+      "scenario": "open",
+      "result": "goal_reached",
+      "passed": true,
+      "elapsed_time": 10.805,
+      "path_length": 5.852297,
+      "minimum_clearance": 2.75,
+      "goal_distance": 0.147703,
+      "unsolved_samples": 0
+    },
+    {
+      "case": "square_static",
+      "robot": "square",
+      "scenario": "static",
+      "result": "timed_out",
+      "passed": false,
+      "elapsed_time": 35.005,
+      "path_length": 2.152449,
+      "minimum_clearance": 0.297551,
+      "goal_distance": 3.847551,
+      "unsolved_samples": 0
+    },
+    {
+      "case": "square_corridor",
+      "robot": "square",
+      "scenario": "corridor",
+      "result": "goal_reached",
+      "passed": true,
+      "elapsed_time": 10.8,
+      "path_length": 5.850863,
+      "minimum_clearance": 1.15,
+      "goal_distance": 0.149137,
+      "unsolved_samples": 0
+    },
+    {
+      "case": "square_crossing",
+      "robot": "square",
+      "scenario": "crossing",
+      "result": "goal_reached",
+      "passed": true,
+      "elapsed_time": 12.365,
+      "path_length": 5.852673,
+      "minimum_clearance": 0.252253,
+      "goal_distance": 0.148067,
+      "unsolved_samples": 0
+    },
+    {
+      "case": "scout_open",
+      "robot": "scout",
+      "scenario": "open",
+      "result": "goal_reached",
+      "passed": true,
+      "elapsed_time": 10.8,
+      "path_length": 5.850863,
+      "minimum_clearance": 2.694,
+      "goal_distance": 0.149137,
+      "unsolved_samples": 0
+    },
+    {
+      "case": "scout_static",
+      "robot": "scout",
+      "scenario": "static",
+      "result": "timed_out",
+      "passed": false,
+      "elapsed_time": 35.005,
+      "path_length": 2.105424,
+      "minimum_clearance": 0.288577,
+      "goal_distance": 3.894577,
+      "unsolved_samples": 0
+    },
+    {
+      "case": "scout_corridor",
+      "robot": "scout",
+      "scenario": "corridor",
+      "result": "goal_reached",
+      "passed": true,
+      "elapsed_time": 10.8,
+      "path_length": 5.850025,
+      "minimum_clearance": 1.11,
+      "goal_distance": 0.149975,
+      "unsolved_samples": 0
+    },
+    {
+      "case": "scout_crossing",
+      "robot": "scout",
+      "scenario": "crossing",
+      "result": "goal_reached",
+      "passed": true,
+      "elapsed_time": 12.535,
+      "path_length": 5.853444,
+      "minimum_clearance": 0.247016,
+      "goal_distance": 0.147764,
+      "unsolved_samples": 0
+    },
+    {
+      "case": "trapezoid_open",
+      "robot": "trapezoid",
+      "scenario": "open",
+      "result": "goal_reached",
+      "passed": true,
+      "elapsed_time": 10.845,
+      "path_length": 5.850539,
+      "minimum_clearance": 1.2,
+      "goal_distance": 0.149461,
+      "unsolved_samples": 0
+    },
+    {
+      "case": "trapezoid_static",
+      "robot": "trapezoid",
+      "scenario": "static",
+      "result": "timed_out",
+      "passed": false,
+      "elapsed_time": 35.005,
+      "path_length": 1.922505,
+      "minimum_clearance": 0.976864,
+      "goal_distance": 5.726566,
+      "unsolved_samples": 0
+    },
+    {
+      "case": "trapezoid_corridor",
+      "robot": "trapezoid",
+      "scenario": "corridor",
+      "result": "collision",
+      "passed": false,
+      "elapsed_time": 0.63,
+      "path_length": 0.197275,
+      "minimum_clearance": 0.0,
+      "goal_distance": 5.805801,
+      "unsolved_samples": 0
+    },
+    {
+      "case": "trapezoid_crossing",
+      "robot": "trapezoid",
+      "scenario": "crossing",
+      "result": "goal_reached",
+      "passed": true,
+      "elapsed_time": 17.78,
+      "path_length": 7.688992,
+      "minimum_clearance": 0.932075,
+      "goal_distance": 0.148547,
+      "unsolved_samples": 0
+    }
+  ],
+  "note": "Independent scene copies; wall-clock timing includes concurrent CPU load."
+}

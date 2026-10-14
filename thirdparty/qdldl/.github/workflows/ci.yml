@@ -1,0 +1,148 @@
+name: Build and test QDLDL
+
+on: [push, pull_request]
+
+env:
+  # The CMake build type
+  BUILD_TYPE: Debug
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [ubuntu, macos, windows]
+        include:
+          - variant: ubuntu
+            # Use 24.04 explicitly to get newer GCC version
+            os: ubuntu-24.04
+            compiler: gcc
+            gcc: 14
+            extra_c_flags: "-fdiagnostics-format=sarif-file"
+            test_target: "test"
+            coverage: ON
+            analysis: ON
+            asan: ON
+          - variant: macos
+            os: macos-latest
+            extra_c_flags: ""
+            test_target: "test"
+            coverage: OFF
+            analysis: OFF
+            asan: OFF
+          - variant: windows
+            os: windows-latest
+            extra_c_flags: ""
+            test_target: "RUN_TESTS"
+            coverage: OFF
+            analysis: OFF
+            asan: OFF
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.variant }}
+
+    env:
+      QDLDL_BUILD_DIR_PREFIX: ${{ github.workspace }}/build
+      CTEST_OUTPUT_ON_FAILURE: 1
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+#      - name: Setup Environment
+#        run: cmake -E make_directory $QDLDL_BUILD_DIR_PREFIX
+
+      - name: Configure
+        shell: bash
+        run: |
+          cmake -S ./ -B $QDLDL_BUILD_DIR_PREFIX \
+          --warn-uninitialized \
+          -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+          -DQDLDL_UNITTESTS=ON \
+          -DQDLDL_DEV_COVERAGE=${{ matrix.coverage }} \
+          -DQDLDL_DEV_ANALYSIS=${{ matrix.analysis }} \
+          -DQDLDL_DEV_ASAN=${{ matrix.asan }} \
+          -DCMAKE_C_FLAGS=${{ matrix.extra_c_flags }}
+
+      - name: Build
+        shell: bash
+        run: cmake --build $QDLDL_BUILD_DIR_PREFIX --config $BUILD_TYPE
+
+      - name: Run tests
+        shell: bash
+        run: cmake --build $QDLDL_BUILD_DIR_PREFIX --target ${{ matrix.test_target }}
+
+        # Only parse and upload coverage if it was generated
+      - name: Process coverage
+        if: ${{ matrix.coverage == 'ON' }}
+        uses: imciner2/run-lcov@v1
+        with:
+          input_directory: ${{ github.workspace }}/build
+          exclude: '"$GITHUB_WORKSPACE/tests/*"'
+          output_file: '${{ github.workspace }}/build/coverage.info'
+
+      - name: Upload coverage
+        if: ${{ matrix.coverage == 'ON' }}
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: '${{ github.workspace }}/build/coverage.info'
+
+      - name: Merge diagnostics
+        if: ${{ matrix.analysis == 'ON' }}
+        uses: microsoft/sarif-actions@v0.1
+        with:
+          # Command to be sent to SARIF Multitool. Runs by default in github.workspace, and including any absolute
+          # paths seems to not work, so everything must be relative.
+          command: merge ./build/*.c.c.sarif --recurse true --output-directory=./build/ --output-file=gcc.sarif
+
+      - name: Upload diagnostics
+        if: ${{ matrix.analysis == 'ON' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          # Path to SARIF file relative to the root of the repository
+          sarif_file: ${{ github.workspace }}/build/gcc.sarif
+          category: gcc
+
+
+  test_configs:
+    strategy:
+      fail-fast: false
+      matrix:
+        float: [ON, OFF]
+        long: [ON, OFF]
+        static: [ON, OFF]
+        shared: [ON, OFF]
+
+    # Only test the build configs on Linux
+    runs-on: ubuntu-latest
+
+    name: Config - FLOAT=${{ matrix.float }}, LONG=${{ matrix.long }}, SHARED=${{ matrix.shared }}, STATIC=${{ matrix.static }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Setup Environment
+        run: cmake -E make_directory ${{ runner.workspace }}/build
+
+      - name: Configure
+        shell: bash
+        working-directory: ${{ runner.workspace }}/build
+        run: cmake --warn-uninitialized -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DQDLDL_BUILD_SHARED_LIB=${{ matrix.shared }} -DQDLDL_BUILD_STATIC_LIB=${{ matrix.static }} -DQDLDL_FLOAT=${{ matrix.float }} -DQDLDL_LONG=${{ matrix.long }} -DQDLDL_UNITTESTS=ON -DCOVERAGE=OFF $GITHUB_WORKSPACE
+
+      - name: Build
+        shell: bash
+        working-directory: ${{ runner.workspace }}/build
+        run: cmake --build . --config $BUILD_TYPE
+
+        # The test suite requires the static library for linkage
+      - name: Run tests
+        if: ${{ matrix.static == 'ON' }}
+        shell: bash
+        working-directory: ${{ runner.workspace }}/build
+        run: ctest -C $BUILD_TYPE

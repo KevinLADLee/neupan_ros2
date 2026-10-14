@@ -1,0 +1,105 @@
+{
+  "epoch": 1500,
+  "training": {
+    "data_size": 40000,
+    "data_range": [
+      -8,
+      -8,
+      8,
+      8
+    ],
+    "batch_size": 1024,
+    "epoch": 1500,
+    "valid_freq": 25,
+    "save_freq": 500,
+    "lr": 0.0005,
+    "lr_decay": 0.5,
+    "decay_freq": 500,
+    "seed": 0,
+    "label_method": "ecos",
+    "patience": 20,
+    "min_delta": 0.0
+  },
+  "robot": {
+    "vertices": [
+      [
+        -0.2,
+        -0.25
+      ],
+      [
+        -0.45,
+        0.25
+      ],
+      [
+        0.45,
+        0.25
+      ],
+      [
+        0.2,
+        -0.25
+      ]
+    ]
+  },
+  "validation": {
+    "losses": [
+      0.00025769025250338016,
+      1.956394186709076e-05,
+      0.00011108872431213968,
+      5.759159335866571e-05
+    ],
+    "total_loss": 0.0004459345120412763,
+    "distance_mae": 0.0030800248496234417,
+    "distance_max_error": 0.03214454650878906,
+    "distance_max_overestimate": 0.025403738021850586,
+    "max_dual_norm_violation": 0.0419309139251709,
+    "near_boundary_mae": 0.004371732007712126,
+    "near_boundary_count": 75,
+    "samples": 8000,
+    "rotation_evaluation": "mean over 0, pi/2, pi, 3pi/2"
+  },
+  "data_key": "5d02300ca65d9e9ac32a8db2561b275775b884ed2f4edbf5b80b1168f885cf77",
+  "environment": {
+    "device": "cuda:0",
+    "torch": "2.14.0+cu130",
+    "cuda": "13.0",
+    "gpu": "NVIDIA GeForce RTX 4090 D"
+  },
+  "geometry": {
+    "G": [
+      [
+        0.0,
+        -0.4
+      ],
+      [
+        0.5,
+        -0.25
+      ],
+      [
+        0.0,
+        0.9
+      ],
+      [
+        -0.5,
+        -0.25
+      ]
+    ],
+    "h": [
+      [
+        0.1
+      ],
+      [
+        0.1625
+      ],
+      [
+        0.225
+      ],
+      [
+        0.1625
+      ]
+    ]
+  },
+  "sha256": "3df66b6829f451a76ae9f023539e0555d7c700ada55899bda6aac0a0723bc6b0",
+  "format": "NPTF",
+  "cpp_verification": "passed",
+  "cpp_output": "points=1024 max_mu_error=5.96046e-07 max_distance_error=2.0142e-06\n"
+}

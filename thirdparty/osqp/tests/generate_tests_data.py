@@ -1,0 +1,15 @@
+# Code to generate the unittests for OSQP C code
+
+import basic_lp.generate_problem
+import basic_qp.generate_problem
+import basic_qp2.generate_problem
+import codegen.generate_problem
+import derivative_adjoint.generate_problem
+import lin_alg.generate_problem
+import no_active_set.generate_problem
+import non_cvx.generate_problem
+import primal_dual_infeasibility.generate_problem
+import primal_infeasibility.generate_problem
+import solve_linsys.generate_problem
+import unconstrained.generate_problem
+import update_matrices.generate_problem

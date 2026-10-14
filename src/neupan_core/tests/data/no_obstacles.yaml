@@ -1,0 +1,26 @@
+receding: 3
+step_time: 0.1
+ref_speed: 0.5
+collision_threshold: 0.1
+
+robot:
+  kinematics: diff
+  max_speed: [2.0, 1.0]
+  max_acce: [1.0, 2.0]
+  length: 1.0
+  width: 0.6
+
+pan:
+  iter_num: 2
+  dune_max_num: 0
+  nrmp_max_num: 8
+  iter_threshold: 0.1
+
+adjust:
+  q_s: [1.0, 1.0, 1.0]
+  p_u: 1.0
+  eta: 10.0
+  d_min: 0.1
+  d_max: 1.0
+  ro_obs: 400.0
+  bk: 0.1

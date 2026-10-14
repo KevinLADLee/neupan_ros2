@@ -1,249 +1,99 @@
-# NeuPAN ROS2 Workspace
-
 <div align="center">
 
-<a href="https://ieeexplore.ieee.org/abstract/document/10938329"><img src='https://img.shields.io/badge/PDF-IEEE-brightgreen' alt='PDF'></a>
-<a href="https://arxiv.org/pdf/2403.06828.pdf"><img src='https://img.shields.io/badge/PDF-Arxiv-brightgreen' alt='PDF'></a>
-<a href="https://youtu.be/SdSLWUmZZgQ"><img src='https://img.shields.io/badge/Video-Youtube-blue' alt='youtube'></a>
-<a href="https://www.bilibili.com/video/BV1Zx421y778/?vd_source=cf6ba629063343717a192a5be9fe8985"><img src='https://img.shields.io/badge/Video-Bilibili-blue' alt='youtube'></a>
-<a href="https://hanruihua.github.io/neupan_project/"><img src='https://img.shields.io/badge/Website-NeuPAN-orange' alt='website'></a>
-[![ROS2](https://img.shields.io/badge/ROS2-Humble-blue.svg)](https://docs.ros.org/en/humble/)
-[![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.10+-green.svg)](https://www.python.org/)
+# NeuPAN ROS 2
 
-[English](#overview) | [中文](README_CN.md)
+**Native C++ ROS 2 local planner based on NeuPAN**
+
+<a href="https://github.com/hanruihua/NeuPAN"><img src="https://img.shields.io/github/stars/hanruihua/NeuPAN?style=flat" alt="NeuPAN stars"></a>
+<a href="https://ieeexplore.ieee.org/document/10938329"><img src="https://img.shields.io/badge/Paper-IEEE-brightgreen" alt="IEEE paper"></a>
+<a href="https://arxiv.org/pdf/2403.06828.pdf"><img src="https://img.shields.io/badge/Paper-arXiv-brightgreen" alt="arXiv paper"></a>
+<a href="https://youtu.be/SdSLWUmZZgQ"><img src="https://img.shields.io/badge/Video-YouTube-red" alt="YouTube video"></a>
+<a href="https://www.bilibili.com/video/BV1Zx421y778/"><img src="https://img.shields.io/badge/Video-Bilibili-blue" alt="Bilibili video"></a>
+<a href="https://hanruihua.github.io/neupan_project/"><img src="https://img.shields.io/badge/Website-NeuPAN-orange" alt="NeuPAN website"></a>
+
+<a href="https://docs.ros.org/en/humble/"><img src="https://img.shields.io/badge/ROS%202-Humble-blue" alt="ROS 2 Humble"></a>
+<a href="https://docs.ros.org/en/jazzy/"><img src="https://img.shields.io/badge/ROS%202-Jazzy-blue" alt="ROS 2 Jazzy"></a>
+<a href="https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml"><img src="https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml/badge.svg" alt="ROS 2 CI"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later license"></a>
+
+[English](README.md) | [中文](README_CN.md)
 
 </div>
 
----
+NeuPAN ROS 2 brings the [NeuPAN](https://github.com/hanruihua/NeuPAN) navigation
+framework to ROS 2 with a native C++ implementation for robot deployment and
+simulation. It supports ROS 2 Humble and Jazzy.
 
-### Overview
+Maintained by [Hive Matrix Limited](mailto:sales@hive-matrix.com).
 
-**NeuPAN ROS2 Workspace** is a complete ROS2-based navigation system that combines:
+## Acknowledgments
 
-- **NeuPAN Planner** ([`src/neupan_ros2`](src/neupan_ros2)): Neural Proximal Alternating Network for end-to-end navigation planning
-- **DDR Minimal Sim** ([`src/ddr_minimal_sim`](src/ddr_minimal_sim)): Lightweight differential-drive robot simulator
+This project builds on [NeuPAN](https://github.com/hanruihua/NeuPAN),
+[NeuPAN-ROS](https://github.com/hanruihua/neupan_ros), and Kaiyuan Zhang's
+[neupan_cpp](https://github.com/zhangkaiyuan007/neupan_cpp). The simulation work
+also references [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt). NeuPAN
+algorithm credit remains with all authors of the original paper.
 
-### Key Features
+## Quick Start
 
-- 🤖 **End-to-End Learning**: Direct laser scan to velocity command mapping using neural networks
-- 🎯 **Real-Time Planning**: Fast neural network inference for responsive navigation
-- 🔄 **Sim-to-Real**: Seamless transition between simulation and physical robots (e.g., Limo)
-- 🛠️ **Easy Testing**: Pre-configured scenarios for algorithm validation
-- 📦 **Modular Design**: Independent packages for flexibility
-- 🔒 **Thread-Safe**: Multi-threaded architecture with state protection for robust performance
-- 🎨 **Optional Visualization**: Configurable RViz markers for performance tuning on embedded platforms
-- ⚙️ **CI/CD Ready**: Automated testing and build verification with Docker-based workflows
-
-### Demo
-
-<div align="center">
-  <img src="imgs/sim-maze.gif" alt="NeuPAN navigating through maze scenario" width="600"/>
-  <p><em>NeuPAN navigating autonomously through a complex maze scenario</em></p>
-</div>
-
-### Quick Start
-
-#### 1. Prerequisites
-
-- **ROS2**: Humble or later
-- **System**: Ubuntu 22.04 (recommended)
-- **Hardware**: CPU (GPU optional)
-
-#### 2. Install Dependencies
+Install ROS 2 Humble or Jazzy and clone the repository. Set `ROS_DISTRO` to
+`humble` or `jazzy`, then run:
 
 ```bash
-# Navigate to workspace root
-git clone https://github.com/KevinLADLee/neupan_ros2.git
-cd neupan_ros2
-
-# Run setup script (installs ROS2 and C++ dependencies only)
-chmod +x setup.sh
-./setup.sh
-```
-
-<details>
-<summary>Or install manually</summary>
-
-**ROS2 Dependencies:**
-```bash
-sudo apt update
-sudo apt install -y \
-    ros-humble-tf2-tools \
-    ros-humble-tf2-ros \
-    ros-humble-nav-msgs \
-    ros-humble-sensor-msgs \
-    ros-humble-geometry-msgs \
-    ros-humble-visualization-msgs \
-    libeigen3-dev \
-    libyaml-cpp-dev
-```
-
-**Python Dependencies:**
-
-⚠️ **Important:** NeuPAN requires numpy < 2.0
-
-Please refer to the official NeuPAN repository for detailed installation:
-**https://github.com/hanruihua/NeuPAN**
-
-Typical installation:
-```bash
-# Install PyTorch (choose CPU or GPU version from https://pytorch.org)
-pip3 install torch torchvision
-
-# Install NeuPAN and dependencies
-pip3 install neupan
-pip3 install "numpy<2.0" scipy matplotlib pyyaml
-```
-</details>
-
-#### 3. Build Workspace
-
-```bash
-# Use build script
-chmod +x build.sh
+ROS_DISTRO=humble
+source /opt/ros/$ROS_DISTRO/setup.bash
+./install_deps.sh
 ./build.sh
-
-# Or build manually
-colcon build --symlink-install
 source install/setup.bash
+ros2 launch neupan_sim quick_start.launch.py
 ```
 
-#### 4. Run Demo
+This starts the demonstration and RViz. Use `rviz:=false` for a headless run.
+See the [installation guide](docs/installation.md) for prerequisites and build
+options.
 
-**Simulation with NeuPAN:**
-```bash
-source install/setup.bash
-ros2 launch neupan_ros2 sim_complete.launch.py sim_env_config:=scenario_corridor.yaml
-```
+## Workspace packages
 
-**Alternative scenarios:** See [ddr_minimal_sim scenarios](src/ddr_minimal_sim/README.md#pre-configured-scenarios) for complete list (corridor, maze, narrow_passage, u_trap, polygon_random, empty)
+| Package | Purpose | Documentation |
+| --- | --- | --- |
+| `neupan_solver_vendor` | Offline solver dependencies | [README](thirdparty/README.md) |
+| `neupan_core` | NeuPAN planning library | [README](src/neupan_core/README.md) |
+| `neupan_ros` | ROS 2 integration | [README](src/neupan_ros/README.md) |
+| `neupan_sim` | Simulation and verification | [README](src/neupan_sim/README.md) |
 
-### Usage Scenarios
+See [src/README.md](src/README.md) for the workspace structure. Offline model
+training is documented in [`training/README.md`](training/README.md).
+The [Scout Mini Diff example](examples/scout_mini_diff/README.md) shows how to
+train and run a 612 mm × 580 mm robot with a matching model and configuration.
 
-#### Scenario 1: Real Robot Deployment (Limo)
+## Documentation
 
-Deploy NeuPAN on physical Limo robot:
+- [Coordinate-frame contract](docs/coordinate_frames.md)
+- [ROS 2 topic overview (Chinese)](docs/ros_interfaces_CN.md)
+- [Dynamic-obstacle message contract (Chinese)](docs/dynamic_obstacles_CN.md)
 
-```bash
-# Make sure Limo drivers are running
-ros2 launch neupan_ros2 limo.launch.py
-```
+## Citation
 
-#### Scenario 2: Complete Simulation
-
-Full system with simulator + NeuPAN planner:
-
-```bash
-ros2 launch neupan_ros2 sim_complete.launch.py
-
-ros2 launch neupan_ros2 sim_complete.launch.py sim_env_config:=scenario_maze.yaml
-```
-
-### Package Details
-
-#### 📦 src/neupan_ros2
-
-ROS2 implementation of [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) neural navigation planner.
-**[→ Documentation](src/neupan_ros2/README.md)**
-
-#### 📦 src/ddr_minimal_sim
-
-Lightweight differential-drive robot simulator with laser scanning and pre-configured test scenarios.
-**[→ Documentation](src/ddr_minimal_sim/README.md)**
-
-
-
-### Development
-
-#### Building
-
-```bash
-# Build all packages
-colcon build --symlink-install
-
-# Build specific package
-colcon build --packages-select neupan_ros2
-colcon build --packages-select ddr_minimal_sim
-```
-
-#### Customization
-
-- **Simulator scenarios**: See [ddr_minimal_sim development guide](src/ddr_minimal_sim/README.md#development) for custom scenarios
-- **NeuPAN parameters**: Modify `src/neupan_ros2/config/robots/<robot>/planner.yaml`
-
-### Continuous Integration
-
-[![ROS2 CI](https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml/badge.svg)](https://github.com/KevinLADLee/neupan_ros2/actions/workflows/ros2-ci.yml)
-
-Automated testing on every push and pull request:
-
-- **Build Verification**: Compiles workspace on Ubuntu 22.04 + ROS2 Humble
-- **Code Quality**: flake8 and pep257 linting with GitHub annotations
-- **Docker-based**: Reproducible builds using official ROS2 containers
-- **Optimized Caching**: Fast CI runs (~30sec with cache hits)
-- **Workspace Validation**: Detects duplicate packages and workspace issues
-
-See [CI/CD Documentation](.github/CI_README.md) for detailed workflow information.
-
-### Citation
-
-If you find this code or paper helpful, please kindly star ⭐ this repository and cite our paper:
+If NeuPAN is useful in your work, please cite the original paper:
 
 ```bibtex
 @ARTICLE{10938329,
   author={Han, Ruihua and Wang, Shuai and Wang, Shuaijun and Zhang, Zeqing and Chen, Jianjun and Lin, Shijie and Li, Chengyang and Xu, Chengzhong and Eldar, Yonina C. and Hao, Qi and Pan, Jia},
-  journal={IEEE Transactions on Robotics}, 
-  title={NeuPAN: Direct Point Robot Navigation With End-to-End Model-Based Learning}, 
+  journal={IEEE Transactions on Robotics},
+  title={NeuPAN: Direct Point Robot Navigation With End-to-End Model-Based Learning},
   year={2025},
   volume={41},
-  number={},
   pages={2804-2824},
-  doi={10.1109/TRO.2025.3554252}}
+  doi={10.1109/TRO.2025.3554252}
+}
 ```
 
-### License
+## License
 
-This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
+NeuPAN ROS 2 first-party code is licensed under the
+[GNU General Public License v3.0 or later](LICENSE). It ports or references
+GPL-3.0 projects including NeuPAN, NeuPAN-ROS, neupan_cpp, and DDR-opt.
 
-This maintains consistency with [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) (ROS1 version).
-
-### Troubleshooting
-
-<details>
-<summary>Build errors</summary>
-
-- Ensure all dependencies are installed: `./setup.sh`
-- Check ROS2 sourced: `source /opt/ros/humble/setup.bash`
-- Clean build: `rm -rf build install log && colcon build`
-</details>
-
-<details>
-<summary>Runtime errors</summary>
-
-- Verify package discovery: `ros2 pkg list | grep -E "neupan|ddr"`
-- Check topics: `ros2 topic list`
-- Review logs: `ros2 run rqt_console rqt_console`
-</details>
-
-<details>
-<summary>NeuPAN model not found</summary>
-
-- Check model file exists: `src/neupan_ros2/config/robots/<robot>/models/dune_model_5000.pth`
-- Download from repository if missing
-</details>
-
-### Contributing
-
-Contributions welcome! Submit issues or pull requests on [GitHub](https://github.com/KevinLADLee/neupan_ros2).
-
-### Acknowledgments
-
-- [NeuPAN](https://github.com/hanruihua/NeuPAN) & [NeuPAN-ROS](https://github.com/hanruihua/neupan_ros) - Original algorithm
-- [DDR-opt](https://github.com/ZJU-FAST-Lab/DDR-opt) - Simulator reference
-- ROS2 integration optimized for [AgileX Limo](https://global.agilex.ai/products/limo-pro) by [HiveMatrix Limited](mailto:sales@hive-matrix.com)
-  - *Interested in Limo robots or technical support? Contact HiveMatrix - your commercial support empowers continued open-source development*
-
----
-
-**Author**: KevinLADLee (kevinladlee@gmail.com)
+Bundled solver components retain their original Apache-2.0 and BSD-3-Clause
+terms. Versions, provenance, license files, and redistribution notices are
+listed in the [third-party dependency manifest](thirdparty/README.md).

@@ -1,0 +1,29 @@
+# A2-W current-pose footprint, in metres in the URDF base_link frame.
+# Source: /home/unitree/dev/calibration/robot_envelope_current/envelope.yaml
+# Length 0.94 m, width 0.55 m; centre [-0.05, -0.005] m.
+# Includes at least 0.03 m per-face margin on the captured URDF/STL geometry.
+# Sensor housings/brackets are unmodeled; not an envelope of all leg motions.
+# DUNE is 2D: the provisional 0.82 m height does not enter training.
+# Deployment must use these same vertices in its robot state/base frame.
+robot:
+  vertices:
+    - [-0.52, -0.28]
+    - [ 0.42, -0.28]
+    - [ 0.42,  0.27]
+    - [-0.52,  0.27]
+
+train:
+  device: cuda
+  data_size: 100000
+  data_range: [-25, -25, 25, 25]
+  batch_size: 1024
+  epochs: 5000
+  lr: 0.00005
+  lr_decay: 0.5
+  decay_freq: 1500
+  valid_freq: 20
+  save_freq: 100
+  patience: 20
+  min_delta: 0.0
+  seed: 0
+  label_method: ecos

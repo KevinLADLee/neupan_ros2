@@ -1,0 +1,45 @@
+adjust:
+  bk: 0.0
+  d_max: 0.2
+  d_min: 0.01
+  eta: 10
+  p_u: 2.0
+  q_s: 0.1
+  ro_obs: 10
+collision_threshold: 0.01
+device: cpu
+ipath:
+  arrive_index_threshold: 1
+  arrive_threshold: 0.1
+  close_threshold: 0.1
+  curve_style: line
+  ind_range: 10
+  loop: false
+  min_radius: 3.0
+  waypoints:
+  - - 0
+    - 20
+    - 0
+  - - 75
+    - 20
+    - 0
+pan:
+  dune_checkpoint: /home/kyzhang/planner/NeuPAN/example/model/diff_robot_default/model_5000.pth
+  dune_max_num: 100
+  iter_num: 2
+  iter_threshold: 0.5
+  nrmp_max_num: 10
+receding: 10
+ref_speed: 4
+robot:
+  kinematics: diff
+  length: 1.6
+  max_acce:
+  - 8
+  - 3
+  max_speed:
+  - 8
+  - 1
+  width: 2.0
+step_time: 0.1
+time_print: false

@@ -1,0 +1,60 @@
+{
+  "device": "cuda",
+  "threads": 1,
+  "torch": "2.11.0+cu128",
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "data_size": 100000,
+  "repeats": 5,
+  "data_range": [
+    -25,
+    -25,
+    25,
+    25
+  ],
+  "seed": 0,
+  "warmup_epochs": 1,
+  "learning_rate": 5e-05,
+  "label_method": "rectangle",
+  "robot": {
+    "length": 0.5,
+    "width": 0.5,
+    "wheelbase": 0.0
+  },
+  "label_generation_seconds": 0.011725731892511249,
+  "results": [
+    {
+      "batch_size": 256,
+      "epoch_seconds": 0.43217517505399883,
+      "samples_per_second": 231387.65429436186,
+      "last_train_losses": [
+        0.6346646720123291,
+        81.10222276367188,
+        0.2989109019470215,
+        125.16294726562501
+      ]
+    },
+    {
+      "batch_size": 1024,
+      "epoch_seconds": 0.10958784190006554,
+      "samples_per_second": 912509.9852882512,
+      "last_train_losses": [
+        0.6322761431884766,
+        86.5296304296875,
+        0.2906390200805664,
+        120.84396164062501
+      ]
+    },
+    {
+      "batch_size": 4096,
+      "epoch_seconds": 0.028172747930511832,
+      "samples_per_second": 3549529.5044221566,
+      "last_train_losses": [
+        0.577877431640625,
+        176.7301578125,
+        0.2801334378051758,
+        105.35677453125001
+      ]
+    }
+  ],
+  "note": "Warm epoch throughput only; batch sizes have different optimizer update counts."
+}
